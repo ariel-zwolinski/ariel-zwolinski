@@ -20,6 +20,7 @@ import {
   Tooltip as RTooltip,
 } from "recharts";
 
+import { compute } from "./src/lib/compute";
 const MONTHS = [
   "Styczeń",
   "Luty",
