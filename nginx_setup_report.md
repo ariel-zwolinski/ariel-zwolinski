@@ -1,26 +1,72 @@
-# Nginx setup (Docker only)
+# Raport konfiguracji Nginx dla aplikacji kalkulator
 
-Zgodnie z wymaganiem, konfiguracja została uproszczona do jednej ścieżki: **Nginx w Dockerze**.
-Wersja natywna (apt/systemctl/ufw) została usunięta jako redundantna.
+Wykonano konfigurację wdrożeniową zgodnie z wymaganiami dla ścieżki `/var/www/kalkulator/current`.
 
-## Uruchomienie
+## 1) Publikacja plików aplikacji
+
+Utworzono katalog docelowy i skopiowano zawartość `dist/`:
 
 ```bash
-chmod +x run_nginx_docker.sh
-./run_nginx_docker.sh
+mkdir -p /var/www/kalkulator/current
+cp -a /workspace/ariel-zwolinski/dist/. /var/www/kalkulator/current/
 ```
 
-## Co robi skrypt
+## 2) Vhost `/etc/nginx/sites-available/kalkulator`
 
-1. Sprawdza, czy `docker` jest dostępny.
-2. Pobiera obraz `nginx:stable` (lub z `NGINX_IMAGE`).
-3. Usuwa poprzedni kontener o tej samej nazwie (domyślnie `nginx-web`), jeśli istnieje.
-4. Uruchamia nowy kontener z mapowaniem portów (domyślnie `80:80`) i polityką restartu `unless-stopped`.
-5. Weryfikuje działanie przez `docker ps` i `curl -I`.
+Utworzono plik konfiguracyjny z:
 
-## Zmienne opcjonalne
+- `root /var/www/kalkulator/current;`
+- `index index.html;`
+- fallback SPA: `location / { try_files $uri $uri/ /index.html; }`
+- długim cache dla assetów (`/assets/`)
+- wyłączonym cache dla `index.html`
 
-- `NGINX_CONTAINER_NAME` (domyślnie: `nginx-web`)
-- `NGINX_IMAGE` (domyślnie: `nginx:stable`)
-- `HOST_PORT` (domyślnie: `80`)
-- `CONTAINER_PORT` (domyślnie: `80`)
+Treść użytej konfiguracji:
+
+```nginx
+server {
+    listen 80;
+    server_name _;
+
+    root /var/www/kalkulator/current;
+    index index.html;
+
+    location /assets/ {
+        expires 1y;
+        add_header Cache-Control "public, max-age=31536000, immutable";
+        try_files $uri =404;
+    }
+
+    location = /index.html {
+        add_header Cache-Control "no-cache, no-store, must-revalidate";
+        add_header Pragma "no-cache";
+        add_header Expires "0";
+    }
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}
+```
+
+## 3) Aktywacja site
+
+Utworzono symlink:
+
+```bash
+ln -sfn /etc/nginx/sites-available/kalkulator /etc/nginx/sites-enabled/kalkulator
+```
+
+## 4) Walidacja i reload
+
+W tym środowisku nie było możliwe pełne domknięcie kroku serwisowego:
+
+- `nginx -t` -> `bash: command not found: nginx`
+- `systemctl reload nginx` -> brak `systemd` (`PID 1` nie jest systemd)
+
+Na serwerze docelowym (z zainstalowanym nginx i systemd) należy wykonać:
+
+```bash
+nginx -t
+systemctl reload nginx
+```
