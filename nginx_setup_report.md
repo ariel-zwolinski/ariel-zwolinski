@@ -1,6 +1,6 @@
 # Nginx setup notes
 
-Ten plik podsumowuje docelową konfigurację produkcyjną dla aplikacji statycznej.
+Podsumowanie docelowej konfiguracji produkcyjnej dla aplikacji statycznej.
 
 ## Ścieżka publikacji
 
@@ -23,8 +23,15 @@ Wymagane parametry:
 ## Aktywacja na serwerze
 
 ```bash
+sudo mkdir -p /var/www/kalkulator/releases
 sudo cp deploy/nginx/kalkulator.conf /etc/nginx/sites-available/kalkulator
 sudo ln -sfn /etc/nginx/sites-available/kalkulator /etc/nginx/sites-enabled/kalkulator
 sudo nginx -t
 sudo systemctl reload nginx
 ```
+
+## Niezbędne pliki do kopiowania
+
+- każdy deploy: `dist.tar.gz`
+- jednorazowo: `deploy/nginx/kalkulator.conf`
+- opcjonalnie: `scripts/deploy_release.sh` (jeśli deploy ma być wykonywany bez pełnego repo)

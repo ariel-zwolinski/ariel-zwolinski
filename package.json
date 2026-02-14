@@ -9,7 +9,8 @@
     "preview": "node scripts/preview.mjs",
     "lint": "eslint eslint.config.js scripts/**/*.mjs",
     "test": "node --experimental-strip-types --test tests/**/*.test.ts",
-    "typecheck": "tsc -p tsconfig.app.json --noEmit"
+    "typecheck": "tsc -p tsconfig.app.json --noEmit",
+    "release": "npm run test && npm run typecheck && npm run build && bash scripts/release.sh"
   },
   "dependencies": {
     "@radix-ui/react-label": "^2.1.0",
