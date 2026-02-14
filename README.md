@@ -1,74 +1,36 @@
-# Kalkulator podatkowy (React + Vite) — build i deploy na Nginx
+# Kalkulator podatkowy (React + Vite) — produkcyjny deploy na Nginx
 
-Ten projekt jest **statycznym frontendem**. Na serwer produkcyjny z Nginx wrzucasz wyłącznie artefakt builda (`dist/` albo `dist.tar.gz`), bez `node_modules` i bez kodu źródłowego.
+Ten projekt jest **statycznym frontendem**. Na serwer produkcyjny kopiujesz wyłącznie artefakt builda (`dist.tar.gz`) oraz (jednorazowo) plik konfiguracji Nginx.
 
-## 1) Build lokalnie
+## Szybki start (lokalnie)
 
 ```bash
 npm install
-npm run test
-npm run build
-bash scripts/release.sh
+npm run release
 ```
 
-Po tych komendach masz:
-- `dist/` — gotowe pliki statyczne,
-- `dist.tar.gz` — paczka do szybkiego uploadu.
+To uruchamia testy + typecheck + build, a na końcu tworzy `dist.tar.gz`.
 
-> Uwaga: repo nie zawiera lockfile, więc używamy `npm install` (nie `npm ci`).
+## Co kopiować na serwer
+
+### Każdy deploy
+- `dist.tar.gz`
+
+### Tylko przy pierwszej konfiguracji serwera
+- `deploy/nginx/kalkulator.conf` (do `/etc/nginx/sites-available/kalkulator`)
+- `scripts/deploy_release.sh` (opcjonalnie, jeśli chcesz deployować bez pełnego repo, np. do `/usr/local/bin/kalkulator-deploy`)
 
 ---
 
-## 2) Co kopiować na serwer
+## Pierwsza konfiguracja serwera
 
-Masz dwa poprawne warianty:
-
-- **zalecany:** kopiujesz tylko `dist.tar.gz`,
-- alternatywa: kopiujesz katalog `dist/`.
-
-### Upload paczki
+1. Utwórz katalogi aplikacji:
 
 ```bash
-scp dist.tar.gz user@server:/tmp/dist.tar.gz
+sudo mkdir -p /var/www/kalkulator/releases
 ```
 
----
-
-## 3) Minimalna struktura na serwerze
-
-```text
-/var/www/kalkulator/
-  releases/
-    2026-02-14_120001/
-    2026-02-14_131530/
-  current -> /var/www/kalkulator/releases/2026-02-14_131530
-```
-
-Każdy deploy tworzy nowy katalog release, a `current` jest symlinkiem na aktywną wersję.
-
----
-
-## 4) Deploy release na serwerze
-
-Skrypt znajduje się w repo: `scripts/deploy_release.sh`.
-
-```bash
-sudo APP_DIR=/var/www/kalkulator bash scripts/deploy_release.sh /tmp/dist.tar.gz
-```
-
-Skrypt:
-1. rozpakowuje paczkę do `releases/<timestamp>`,
-2. przełącza symlink `current`,
-3. sprawdza config Nginx (`nginx -t`, jeśli nginx jest dostępny),
-4. próbuje `systemctl reload nginx` (jeśli jest systemd).
-
----
-
-## 5) Konfiguracja Nginx
-
-Gotowy plik vhosta jest w repo: `deploy/nginx/kalkulator.conf`.
-
-Na serwerze:
+2. Wgraj konfigurację Nginx i aktywuj:
 
 ```bash
 sudo cp deploy/nginx/kalkulator.conf /etc/nginx/sites-available/kalkulator
@@ -79,17 +41,49 @@ sudo systemctl reload nginx
 
 ---
 
-## 6) Rollback
+## Deploy release na serwerze
 
-Sprawdź dostępne wersje:
+1. Upload paczki:
+
+```bash
+scp dist.tar.gz user@server:/tmp/dist.tar.gz
+```
+
+2. Deploy (na serwerze):
+
+```bash
+sudo APP_DIR=/var/www/kalkulator bash scripts/deploy_release.sh /tmp/dist.tar.gz
+```
+
+> Jeśli skopiowałeś skrypt do `/usr/local/bin/kalkulator-deploy`, możesz wywołać:
+>
+> `sudo APP_DIR=/var/www/kalkulator kalkulator-deploy /tmp/dist.tar.gz`
+
+Skrypt deployujący:
+- waliduje archiwum,
+- rozpakowuje je do `releases/<timestamp>`,
+- przełącza symlink `current`,
+- sprawdza `nginx -t`,
+- wykonuje `systemctl reload nginx`.
+
+---
+
+## Struktura katalogów na serwerze
+
+```text
+/var/www/kalkulator/
+  releases/
+    2026-02-14_120001/
+    2026-02-14_131530/
+  current -> /var/www/kalkulator/releases/2026-02-14_131530
+```
+
+---
+
+## Rollback
 
 ```bash
 ls -1 /var/www/kalkulator/releases
-```
-
-Przełącz `current` na poprzedni release:
-
-```bash
 sudo ln -sfn /var/www/kalkulator/releases/<release_id> /var/www/kalkulator/current
 sudo systemctl reload nginx
 ```

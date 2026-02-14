@@ -3,9 +3,7 @@
 ## Pre-deploy (lokalnie)
 
 - [ ] `npm install`
-- [ ] `npm run test`
-- [ ] `npm run build`
-- [ ] `bash scripts/release.sh`
+- [ ] `npm run release`
 - [ ] Istnieje plik `dist.tar.gz`
 
 ## Pierwsza konfiguracja serwera
