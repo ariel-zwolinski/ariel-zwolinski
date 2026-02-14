@@ -1,0 +1,9 @@
+{
+  "name": "ariel-zwolinski",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "lint": "eslint eslint.config.js",
+    "test": "node --test tests/**/*.test.ts"
+  }
+}
