@@ -18,8 +18,3 @@ const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
 Input.displayName = "Input";
 
 export { Input };
-import type { InputHTMLAttributes } from 'react'
-
-export function Input({ className = '', ...props }: InputHTMLAttributes<HTMLInputElement>) {
-  return <input className={`rounded border px-2 py-1 ${className}`.trim()} {...props} />
-}
