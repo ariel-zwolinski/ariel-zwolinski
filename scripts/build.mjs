@@ -1,7 +1,13 @@
-import { cpSync, existsSync, mkdirSync, rmSync } from 'node:fs'
+import { spawnSync } from 'node:child_process'
 
-if (existsSync('dist')) rmSync('dist', { recursive: true, force: true })
-mkdirSync('dist', { recursive: true })
-cpSync('index.html', 'dist/index.html')
-if (existsSync('src')) cpSync('src', 'dist/src', { recursive: true })
-console.log('Build complete: dist/')
+const result = spawnSync('npx', ['vite', 'build'], {
+  stdio: 'inherit',
+  shell: process.platform === 'win32',
+})
+
+if (result.error) {
+  console.error('[ERROR] Failed to start Vite build:', result.error.message)
+  process.exit(1)
+}
+
+process.exit(result.status ?? 1)

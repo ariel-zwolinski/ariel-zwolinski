@@ -7,8 +7,9 @@
     "dev": "node scripts/dev.mjs",
     "build": "node scripts/build.mjs",
     "preview": "node scripts/preview.mjs",
-    "lint": "eslint eslint.config.js",
-    "test": "node --experimental-strip-types --test tests/**/*.test.ts"
+    "lint": "eslint eslint.config.js scripts/**/*.mjs",
+    "test": "node --experimental-strip-types --test tests/**/*.test.ts",
+    "typecheck": "tsc -p tsconfig.app.json --noEmit"
   },
   "dependencies": {
     "@radix-ui/react-label": "^2.1.0",
