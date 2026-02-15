@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kalkulator wynagrodzeń 2026 — standalone</title>
+  <style>
+    :root { color-scheme: light; }
+    body { font-family: Inter, Arial, sans-serif; margin: 0; background: #f3f4f6; color: #111827; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 16px; display: grid; gap: 16px; }
+    .card { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 14px; }
+    h1 { margin: 0; font-size: 1.4rem; }
+    h2 { margin: 0 0 10px; font-size: 1rem; }
+    .grid { display: grid; gap: 10px; }
+    .grid.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .grid.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    label { font-size: 0.85rem; color: #374151; display: block; margin-bottom: 4px; }
+    input, select { width: 100%; box-sizing: border-box; border: 1px solid #d1d5db; border-radius: 8px; padding: 8px; font-size: 0.95rem; }
+    input[type="checkbox"] { width: auto; }
+    .checkbox { display: flex; align-items: center; gap: 8px; font-size: 0.9rem; }
+    .summary { display: grid; gap: 10px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .metric { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 10px; padding: 10px; }
+    .metric .k { font-size: 0.8rem; color: #6b7280; }
+    .metric .v { font-size: 1.3rem; font-weight: 600; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+    th, td { border: 1px solid #e5e7eb; padding: 6px; text-align: right; white-space: nowrap; }
+    th:first-child, td:first-child { text-align: left; }
+    .table-wrap { overflow-x: auto; }
+    .status-KWOTA_WOLNA { background: #ecfdf5; }
+    .status-12 { background: #eff6ff; }
+    .status-POZYCZONY_12 { background: #fffbeb; }
+    .status-32 { background: #fef2f2; }
+    @media (max-width: 900px) {
+      .grid.two, .grid.three, .summary { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <h1>Kalkulator wynagrodzeń 2026 (self-contained, 1 plik)</h1>
+      <p>Otwórz ten plik bez serwera (desktop/mobile), wpisz dane i wyniki liczą się automatycznie.</p>
+    </div>
+
+    <div class="grid two">
+      <div class="card" id="personA"></div>
+      <div class="card" id="personB"></div>
+    </div>
+
+    <div class="card" id="settings"></div>
+
+    <div class="card">
+      <h2>Wynik</h2>
+      <div class="summary" id="summary"></div>
+    </div>
+
+    <div class="card">
+      <h2>Miesięczne rozbicie</h2>
+      <div class="table-wrap"><table id="resultTable"></table></div>
+    </div>
+  </div>
+
+  <script>
+    const MONTHS = ["Styczeń","Luty","Marzec","Kwiecień","Maj","Czerwiec","Lipiec","Sierpień","Wrzesień","Październik","Listopad","Grudzień"];
+    const clamp0 = n => Number.isFinite(n) ? Math.max(0, n) : 0;
+    const round2 = n => Math.round((n + Number.EPSILON) * 100) / 100;
+    const fmt = n => (Number.isFinite(n) ? n : 0).toLocaleString("pl-PL", { style: "currency", currency: "PLN" });
+
+    const state = {
+      s: {
+        year: 2026, jointSettlement: true, enableJointAwareWithholding: true,
+        threshold12: 120000, freeAmount: 30000, taxRate1: 0.12, taxRate2: 0.32,
+        monthlyTaxReductionMax: 300, zusEmerytalna: 0.0976, zusRentowa: 0.015,
+        zusChorobowa: 0.0245, zusCapAnnual: 282600, healthRate: 0.09, savingsBufferPct: 10,
+      },
+      A: { name: "Osoba A", mode: "FIXED_MONTHLY", annualGross: 0, fixedMonthlyGross: 15000, monthlyGross: Array(12).fill(0), pit2MonthlyReduction: 300, kupMonthly: 250, enablePpk: false, ppkEmployeePct: 2, ppkEmployerPct: 1.5 },
+      B: { name: "Osoba B", mode: "FIXED_MONTHLY", annualGross: 0, fixedMonthlyGross: 8000, monthlyGross: Array(12).fill(0), pit2MonthlyReduction: 300, kupMonthly: 250, enablePpk: false, ppkEmployeePct: 2, ppkEmployerPct: 1.5 }
+    };
+
+    function buildMonthlyGross(p){
+      if (p.mode === "ANNUAL") return Array(12).fill(round2((p.annualGross || 0) / 12));
+      if (p.mode === "FIXED_MONTHLY") return Array(12).fill(round2(p.fixedMonthlyGross || 0));
+      return (p.monthlyGross?.length === 12 ? p.monthlyGross : Array(12).fill(0)).map(x => round2(x || 0));
+    }
+    function calcEmployeeSocial(gross, cumPensionBase, s) {
+      const grossClamped = clamp0(gross);
+      const remainingCap = Math.max(0, s.zusCapAnnual - cumPensionBase);
+      const pensionBaseThisMonth = Math.min(grossClamped, remainingCap);
+      const emerytalna = pensionBaseThisMonth * s.zusEmerytalna;
+      const rentowa = pensionBaseThisMonth * s.zusRentowa;
+      const chorobowa = grossClamped * s.zusChorobowa;
+      return { pensionBaseThisMonth, socialTotal: emerytalna + rentowa + chorobowa };
+    }
+    function annualTaxForBase(taxBaseAnnual, s){
+      const base = clamp0(taxBaseAnnual);
+      if (base <= s.freeAmount) return 0;
+      if (base <= s.threshold12) return (base - s.freeAmount) * s.taxRate1;
+      return (s.threshold12 - s.freeAmount) * s.taxRate1 + (base - s.threshold12) * s.taxRate2;
+    }
+    function compute(A, B, s){
+      const grossA = buildMonthlyGross(A), grossB = buildMonthlyGross(B);
+      let cumPensionBaseA = 0, cumPensionBaseB = 0, cumTaxBaseA = 0, cumTaxBaseB = 0, cumJointBase = 0;
+      const rows = [];
+      const jointFree = s.jointSettlement ? 2 * s.freeAmount : s.freeAmount;
+      const jointThr12 = s.jointSettlement ? 2 * s.threshold12 : s.threshold12;
+
+      for (let m=0;m<12;m++) {
+        const gA = clamp0(grossA[m]), gB = clamp0(grossB[m]);
+        const ppkEmpA = A.enablePpk ? gA * (A.ppkEmployeePct/100) : 0;
+        const ppkErA = A.enablePpk ? gA * (A.ppkEmployerPct/100) : 0;
+        const ppkEmpB = B.enablePpk ? gB * (B.ppkEmployeePct/100) : 0;
+        const ppkErB = B.enablePpk ? gB * (B.ppkEmployerPct/100) : 0;
+
+        const socA = calcEmployeeSocial(gA, cumPensionBaseA, s), socB = calcEmployeeSocial(gB, cumPensionBaseB, s);
+        cumPensionBaseA += socA.pensionBaseThisMonth; cumPensionBaseB += socB.pensionBaseThisMonth;
+
+        const socialA = socA.socialTotal, socialB = socB.socialTotal;
+        const healthA = clamp0(gA - socialA) * s.healthRate;
+        const healthB = clamp0(gB - socialB) * s.healthRate;
+        const taxBaseA = clamp0(gA - socialA - (A.kupMonthly||0) + ppkErA);
+        const taxBaseB = clamp0(gB - socialB - (B.kupMonthly||0) + ppkErB);
+        const nextCumA = cumTaxBaseA + taxBaseA, nextCumB = cumTaxBaseB + taxBaseB;
+
+        let pitA = 0, pitB = 0;
+        if (s.jointSettlement && s.enableJointAwareWithholding) {
+          const jointBaseThisMonth = taxBaseA + taxBaseB;
+          const nextCumJoint = cumJointBase + jointBaseThisMonth;
+          const jointTaxCum = annualTaxForBase(nextCumJoint, { ...s, freeAmount: jointFree, threshold12: jointThr12 });
+          const jointTaxPrev = annualTaxForBase(cumJointBase, { ...s, freeAmount: jointFree, threshold12: jointThr12 });
+          const jointIncrement = Math.max(0, jointTaxCum - jointTaxPrev);
+          const denom = jointBaseThisMonth > 0 ? jointBaseThisMonth : 1;
+          pitA = Math.max(0, jointIncrement * (taxBaseA / denom) - (A.pit2MonthlyReduction||0));
+          pitB = Math.max(0, jointIncrement * (taxBaseB / denom) - (B.pit2MonthlyReduction||0));
+          cumJointBase = nextCumJoint;
+        } else {
+          pitA = Math.max(0, annualTaxForBase(nextCumA, s) - annualTaxForBase(cumTaxBaseA, s) - (A.pit2MonthlyReduction||0));
+          pitB = Math.max(0, annualTaxForBase(nextCumB, s) - annualTaxForBase(cumTaxBaseB, s) - (B.pit2MonthlyReduction||0));
+        }
+
+        cumTaxBaseA = nextCumA; cumTaxBaseB = nextCumB;
+        const cumTotal = cumTaxBaseA + cumTaxBaseB;
+        let status = "12";
+        if (s.jointSettlement) {
+          if (cumTotal <= 2*s.freeAmount) status = "KWOTA_WOLNA";
+          else if (cumTotal <= 2*s.threshold12) status = (cumTaxBaseA > s.threshold12 || cumTaxBaseB > s.threshold12) ? "POZYCZONY_12" : "12";
+          else status = "32";
+        } else {
+          if (cumTotal <= s.freeAmount) status = "KWOTA_WOLNA";
+          else if (cumTotal <= s.threshold12) status = "12";
+          else status = "32";
+        }
+
+        const netA = clamp0(gA - socialA - healthA - pitA - ppkEmpA);
+        const netB = clamp0(gB - socialB - healthB - pitB - ppkEmpB);
+
+        rows.push({ month: MONTHS[m], grossTotal: gA + gB, socialTotal: socialA + socialB, pitTotal: pitA + pitB, netTotal: netA + netB, taxBaseCumTotal: cumTotal, taxBaseA, taxBaseB, status });
+      }
+
+      const annualBaseA = rows.reduce((a,r) => a + r.taxBaseA, 0);
+      const annualBaseB = rows.reduce((a,r) => a + r.taxBaseB, 0);
+      const annualTaxJoint = annualTaxForBase(annualBaseA + annualBaseB, { ...s, freeAmount: jointFree, threshold12: jointThr12 });
+      const advancesPaid = rows.reduce((a,r)=>a+r.pitTotal,0);
+      const taxDue = s.jointSettlement ? annualTaxJoint : annualTaxForBase(annualBaseA,s) + annualTaxForBase(annualBaseB,s);
+      const underpayment = taxDue - advancesPaid;
+      const netTotalAnnual = rows.reduce((a,r)=>a+r.netTotal,0);
+      const target = Math.max(0, underpayment) * (1 + s.savingsBufferPct/100);
+      return { rows, taxDue, advancesPaid, underpayment, target, suggestedMonthlySaving: target/12, savingsRate: netTotalAnnual > 0 ? (target/12)/(netTotalAnnual/12) : 0 };
+    }
+
+    function personForm(personKey) {
+      const p = state[personKey];
+      const monthlyInputs = MONTHS.map((m,i)=>`<div><label>${m}</label><input type="number" data-k="${personKey}.monthlyGross.${i}" value="${p.monthlyGross[i] ?? 0}" step="100" /></div>`).join("");
+      return `
+        <h2>${p.name}</h2>
+        <div class="grid two">
+          <div><label>Imię/etykieta</label><input data-k="${personKey}.name" value="${p.name}" /></div>
+          <div><label>Tryb dochodu</label><select data-k="${personKey}.mode">
+            <option value="ANNUAL" ${p.mode==="ANNUAL"?"selected":""}>Rocznie</option>
+            <option value="FIXED_MONTHLY" ${p.mode==="FIXED_MONTHLY"?"selected":""}>Stała miesięczna</option>
+            <option value="MONTHLY_LIST" ${p.mode==="MONTHLY_LIST"?"selected":""}>Ręcznie 12 miesięcy</option>
+          </select></div>
+          <div><label>Kwota roczna brutto</label><input type="number" data-k="${personKey}.annualGross" value="${p.annualGross}" step="100" /></div>
+          <div><label>Stała miesięczna brutto</label><input type="number" data-k="${personKey}.fixedMonthlyGross" value="${p.fixedMonthlyGross}" step="100" /></div>
+          <div><label>PIT-2 miesięcznie</label><input type="number" data-k="${personKey}.pit2MonthlyReduction" value="${p.pit2MonthlyReduction}" step="10" /></div>
+          <div><label>KUP miesięcznie</label><input type="number" data-k="${personKey}.kupMonthly" value="${p.kupMonthly}" step="10" /></div>
+          <div class="checkbox"><input type="checkbox" data-k="${personKey}.enablePpk" ${p.enablePpk?"checked":""} /><span>Włącz PPK</span></div>
+          <div><label>PPK pracownik (%)</label><input type="number" data-k="${personKey}.ppkEmployeePct" value="${p.ppkEmployeePct}" step="0.1" /></div>
+          <div><label>PPK pracodawca (%)</label><input type="number" data-k="${personKey}.ppkEmployerPct" value="${p.ppkEmployerPct}" step="0.1" /></div>
+        </div>
+        ${p.mode === "MONTHLY_LIST" ? `<div class="grid three" style="margin-top:10px">${monthlyInputs}</div>` : ""}
+      `;
+    }
+
+    function render() {
+      document.getElementById("personA").innerHTML = personForm("A");
+      document.getElementById("personB").innerHTML = personForm("B");
+      document.getElementById("settings").innerHTML = `
+        <h2>Ustawienia</h2>
+        <div class="grid three">
+          <div class="checkbox"><input type="checkbox" data-k="s.jointSettlement" ${state.s.jointSettlement?"checked":""} /><span>Wspólne rozliczenie</span></div>
+          <div class="checkbox"><input type="checkbox" data-k="s.enableJointAwareWithholding" ${state.s.enableJointAwareWithholding?"checked":""} /><span>Zaliczki pod wspólne</span></div>
+          <div><label>Bufor oszczędzania (%)</label><input type="number" data-k="s.savingsBufferPct" value="${state.s.savingsBufferPct}" step="1" /></div>
+          <div><label>Kwota wolna</label><input type="number" data-k="s.freeAmount" value="${state.s.freeAmount}" step="100" /></div>
+          <div><label>Próg 12%</label><input type="number" data-k="s.threshold12" value="${state.s.threshold12}" step="1000" /></div>
+          <div><label>ZUS limit roczny</label><input type="number" data-k="s.zusCapAnnual" value="${state.s.zusCapAnnual}" step="1000" /></div>
+        </div>
+      `;
+
+      const result = compute(state.A, state.B, state.s);
+      document.getElementById("summary").innerHTML = `
+        <div class="metric"><div class="k">Podatek należny (rocznie)</div><div class="v">${fmt(result.taxDue)}</div></div>
+        <div class="metric"><div class="k">Suma zaliczek PIT</div><div class="v">${fmt(result.advancesPaid)}</div></div>
+        <div class="metric"><div class="k">Niedopłata / nadpłata</div><div class="v" style="color:${result.underpayment>0?"#b91c1c":"#047857"}">${fmt(result.underpayment)}</div></div>
+        <div class="metric"><div class="k">Cel oszczędzania</div><div class="v">${fmt(result.target)}</div></div>
+        <div class="metric"><div class="k">Miesięczna odkładana kwota</div><div class="v">${fmt(result.suggestedMonthlySaving)}</div></div>
+        <div class="metric"><div class="k">Stopa oszczędzania</div><div class="v">${(result.savingsRate*100).toFixed(2)}%</div></div>
+      `;
+
+      const rows = result.rows.map(r => `
+        <tr class="status-${r.status}">
+          <td>${r.month}</td><td>${fmt(r.grossTotal)}</td><td>${fmt(r.socialTotal)}</td><td>${fmt(r.pitTotal)}</td><td>${fmt(r.netTotal)}</td><td>${fmt(r.taxBaseCumTotal)}</td><td>${r.status}</td>
+        </tr>`).join("");
+      document.getElementById("resultTable").innerHTML = `
+        <thead><tr><th>Miesiąc</th><th>Brutto razem</th><th>Składki społeczne</th><th>PIT zaliczka</th><th>Netto razem</th><th>Podstawa PIT narastająco</th><th>Status progu</th></tr></thead>
+        <tbody>${rows}</tbody>
+      `;
+
+      attachListeners();
+    }
+
+    function setByPath(path, value) {
+      const parts = path.split('.');
+      let t = state;
+      for (let i=0;i<parts.length-1;i++) t = t[parts[i]];
+      t[parts.at(-1)] = value;
+    }
+
+    function attachListeners() {
+      document.querySelectorAll('[data-k]').forEach(el => {
+        el.oninput = el.onchange = () => {
+          const key = el.dataset.k;
+          const isCheckbox = el.type === 'checkbox';
+          let val = isCheckbox ? el.checked : el.value;
+          if (!isCheckbox && el.type === 'number') val = Number(val || 0);
+          setByPath(key, val);
+          render();
+        };
+      });
+    }
+
+    render();
+  </script>
+</body>
+</html>
