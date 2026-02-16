@@ -215,3 +215,77 @@ test("standalone: linie progów na wykresie są w skali łącznej podstawy", () 
   assert.match(lineChartSVG, /kwota wolna \(łącznie\)/);
   assert.match(lineChartSVG, /próg 12%\/32% \(łącznie\)/);
 });
+
+
+test("standalone: roundTaxToPln zaokrągla miesięczną zaliczkę PIT dla 0,49/0,50", () => {
+  const rt = loadStandaloneRuntime();
+
+  rt.state.s.year = 2026;
+  rt.state.s.finalSettlementMode = "SEPARATE";
+
+  rt.state.A.mode = "FIXED_MONTHLY";
+  rt.state.B.mode = "FIXED_MONTHLY";
+  rt.state.B.fixedMonthlyGross = 0;
+  rt.state.B.kupMonthly = 0;
+  rt.state.B.pit2MonthlyReduction = 0;
+
+  rt.state.A.kupMonthly = 0;
+  rt.state.A.pit2MonthlyReduction = 0;
+
+  const rules = rt.YEAR_RULES[2026];
+  rules.freeAmount = 0;
+  rules.threshold12 = 1_000_000;
+  rules.taxRate1 = 0.12;
+  rules.taxRate2 = 0.12;
+  rules.zusEmerytalna = 0;
+  rules.zusRentowa = 0;
+  rules.zusChorobowa = 0;
+  rules.healthRate = 0;
+
+  rt.state.A.fixedMonthlyGross = 4.0833333333;
+  const low = rt.compute(rt.state.A, rt.state.B, rt.state.s);
+
+  rt.state.A.fixedMonthlyGross = 4.1666666667;
+  const high = rt.compute(rt.state.A, rt.state.B, rt.state.s);
+
+  assert.equal(low.rows[0].pitA, 0);
+  assert.equal(high.rows[0].pitA, 1);
+});
+
+test("standalone: zaokrąglenia wpływają na niedopłatę i nadpłatę", () => {
+  const rt = loadStandaloneRuntime();
+
+  rt.state.s.year = 2026;
+  rt.state.s.finalSettlementMode = "SEPARATE";
+
+  rt.state.A.mode = "FIXED_MONTHLY";
+  rt.state.B.mode = "FIXED_MONTHLY";
+  rt.state.B.fixedMonthlyGross = 0;
+  rt.state.B.kupMonthly = 0;
+  rt.state.B.pit2MonthlyReduction = 0;
+
+  rt.state.A.kupMonthly = 0;
+  rt.state.A.pit2MonthlyReduction = 0;
+
+  const rules = rt.YEAR_RULES[2026];
+  rules.freeAmount = 0;
+  rules.threshold12 = 1_000_000;
+  rules.taxRate1 = 0.12;
+  rules.taxRate2 = 0.12;
+  rules.zusEmerytalna = 0;
+  rules.zusRentowa = 0;
+  rules.zusChorobowa = 0;
+  rules.healthRate = 0;
+
+  rt.state.A.fixedMonthlyGross = 837.4166666667;
+  const under = rt.compute(rt.state.A, rt.state.B, rt.state.s);
+  assert.equal(under.advancesPaid, 1200);
+  assert.equal(under.taxDue, 1206);
+  assert.equal(under.underpayment, 6);
+
+  rt.state.A.fixedMonthlyGross = 837.5;
+  const over = rt.compute(rt.state.A, rt.state.B, rt.state.s);
+  assert.equal(over.advancesPaid, 1212);
+  assert.equal(over.taxDue, 1206);
+  assert.equal(over.underpayment, -6);
+});

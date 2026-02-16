@@ -113,6 +113,9 @@
     const MONTHS = ["Styczeń","Luty","Marzec","Kwiecień","Maj","Czerwiec","Lipiec","Sierpień","Wrzesień","Październik","Listopad","Grudzień"];
     const clamp0 = n => Number.isFinite(n) ? Math.max(0, n) : 0;
     const round2 = n => Math.round((n + Number.EPSILON) * 100) / 100;
+    // Zaokrąglenie podatkowe do pełnego PLN (0.50 w górę); stosowane dla miesięcznych
+    // zaliczek PIT i podatku rocznego, aby polityka była spójna w całym kalkulatorze.
+    const roundTaxToPln = n => Math.round(clamp0(n) + Number.EPSILON);
     const fmt = n => (Number.isFinite(n) ? n : 0).toLocaleString("pl-PL", { style: "currency", currency: "PLN" });
 
     const YEAR_RULES = {
@@ -218,8 +221,8 @@
         const pitReductionA = Math.max(0, Math.min(rules.monthlyTaxReductionMax, A.pit2MonthlyReduction || 0));
         const pitReductionB = Math.max(0, Math.min(rules.monthlyTaxReductionMax, B.pit2MonthlyReduction || 0));
 
-        const pitA = Math.max(0, annualTaxForBase(nextCumA, rules) - annualTaxForBase(cumTaxBaseA, rules) - pitReductionA);
-        const pitB = Math.max(0, annualTaxForBase(nextCumB, rules) - annualTaxForBase(cumTaxBaseB, rules) - pitReductionB);
+        const pitA = roundTaxToPln(Math.max(0, annualTaxForBase(nextCumA, rules) - annualTaxForBase(cumTaxBaseA, rules) - pitReductionA));
+        const pitB = roundTaxToPln(Math.max(0, annualTaxForBase(nextCumB, rules) - annualTaxForBase(cumTaxBaseB, rules) - pitReductionB));
 
         cumTaxBaseA = nextCumA;
         cumTaxBaseB = nextCumB;
@@ -249,13 +252,13 @@
         });
       }
 
-      const annualTaxA = annualTaxForBase(cumTaxBaseA, rules);
-      const annualTaxB = annualTaxForBase(cumTaxBaseB, rules);
-      const annualTaxJoint = annualTaxForBase(cumTaxBaseA + cumTaxBaseB, {
+      const annualTaxA = roundTaxToPln(annualTaxForBase(cumTaxBaseA, rules));
+      const annualTaxB = roundTaxToPln(annualTaxForBase(cumTaxBaseB, rules));
+      const annualTaxJoint = roundTaxToPln(annualTaxForBase(cumTaxBaseA + cumTaxBaseB, {
         ...rules,
         freeAmount: 2 * rules.freeAmount,
         threshold12: 2 * rules.threshold12,
-      });
+      }));
 
       const advancesPaid = rows.reduce((a,r)=>a+r.pitTotal,0);
       const taxDue = s.finalSettlementMode === "JOINT" ? annualTaxJoint : annualTaxA + annualTaxB;
@@ -383,7 +386,7 @@
         <div class="metric"><div class="k">Udział odkładania w miesięcznym netto</div><div class="v">${(result.savingsRate*100).toFixed(2)}%</div></div>
       `;
 
-      document.getElementById("yearRulesInfo").textContent = `${rules.rulesNote} Zaliczki miesięczne liczone są oddzielnie dla każdej osoby, dzięki czemu przepływ netto jest stabilny do momentu wejścia w 32%.`;
+      document.getElementById("yearRulesInfo").textContent = `${rules.rulesNote} Wyniki mają charakter orientacyjny. Zaliczki miesięczne i podatek roczny są zaokrąglane matematycznie do pełnych złotych (0,50 zł i wyżej w górę). Zaliczki miesięczne liczone są oddzielnie dla każdej osoby, dzięki czemu przepływ netto jest stabilny do momentu wejścia w 32%.`;
 
       renderLineChart(result.rows, rules, state.s.finalSettlementMode);
       renderStackedBarChart(result.rows);
