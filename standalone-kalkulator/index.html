@@ -171,9 +171,9 @@
       const p = state[personKey];
       const monthlyInputs = MONTHS.map((m,i)=>`<div><label>${m}</label><input type="number" data-k="${personKey}.monthlyGross.${i}" value="${p.monthlyGross[i] ?? 0}" step="100" /></div>`).join("");
       return `
-        <h2>${p.name}</h2>
+        <h2 data-name-heading="${personKey}"></h2>
         <div class="grid two">
-          <div><label>Imię/etykieta</label><input data-k="${personKey}.name" value="${p.name}" /></div>
+          <div><label>Imię/etykieta</label><input data-k="${personKey}.name" data-name-input="${personKey}" /></div>
           <div><label>Tryb dochodu</label><select data-k="${personKey}.mode">
             <option value="ANNUAL" ${p.mode==="ANNUAL"?"selected":""}>Rocznie</option>
             <option value="FIXED_MONTHLY" ${p.mode==="FIXED_MONTHLY"?"selected":""}>Stała miesięczna</option>
@@ -191,21 +191,17 @@
       `;
     }
 
-    function render() {
-      document.getElementById("personA").innerHTML = personForm("A");
-      document.getElementById("personB").innerHTML = personForm("B");
-      document.getElementById("settings").innerHTML = `
-        <h2>Ustawienia</h2>
-        <div class="grid three">
-          <div class="checkbox"><input type="checkbox" data-k="s.jointSettlement" ${state.s.jointSettlement?"checked":""} /><span>Wspólne rozliczenie</span></div>
-          <div class="checkbox"><input type="checkbox" data-k="s.enableJointAwareWithholding" ${state.s.enableJointAwareWithholding?"checked":""} /><span>Zaliczki pod wspólne</span></div>
-          <div><label>Bufor oszczędzania (%)</label><input type="number" data-k="s.savingsBufferPct" value="${state.s.savingsBufferPct}" step="1" /></div>
-          <div><label>Kwota wolna</label><input type="number" data-k="s.freeAmount" value="${state.s.freeAmount}" step="100" /></div>
-          <div><label>Próg 12%</label><input type="number" data-k="s.threshold12" value="${state.s.threshold12}" step="1000" /></div>
-          <div><label>ZUS limit roczny</label><input type="number" data-k="s.zusCapAnnual" value="${state.s.zusCapAnnual}" step="1000" /></div>
-        </div>
-      `;
+    function syncPersonLabels() {
+      ["A", "B"].forEach(personKey => {
+        const p = state[personKey];
+        const heading = document.querySelector(`[data-name-heading="${personKey}"]`);
+        const input = document.querySelector(`[data-name-input="${personKey}"]`);
+        if (heading) heading.textContent = p.name;
+        if (input) input.value = p.name;
+      });
+    }
 
+    function renderResults() {
       const result = compute(state.A, state.B, state.s);
       document.getElementById("summary").innerHTML = `
         <div class="metric"><div class="k">Podatek należny (rocznie)</div><div class="v">${fmt(result.taxDue)}</div></div>
@@ -224,7 +220,24 @@
         <thead><tr><th>Miesiąc</th><th>Brutto razem</th><th>Składki społeczne</th><th>PIT zaliczka</th><th>Netto razem</th><th>Podstawa PIT narastająco</th><th>Status progu</th></tr></thead>
         <tbody>${rows}</tbody>
       `;
+    }
 
+    function render() {
+      document.getElementById("personA").innerHTML = personForm("A");
+      document.getElementById("personB").innerHTML = personForm("B");
+      document.getElementById("settings").innerHTML = `
+        <h2>Ustawienia</h2>
+        <div class="grid three">
+          <div class="checkbox"><input type="checkbox" data-k="s.jointSettlement" ${state.s.jointSettlement?"checked":""} /><span>Wspólne rozliczenie</span></div>
+          <div class="checkbox"><input type="checkbox" data-k="s.enableJointAwareWithholding" ${state.s.enableJointAwareWithholding?"checked":""} /><span>Zaliczki pod wspólne</span></div>
+          <div><label>Bufor oszczędzania (%)</label><input type="number" data-k="s.savingsBufferPct" value="${state.s.savingsBufferPct}" step="1" /></div>
+          <div><label>Kwota wolna</label><input type="number" data-k="s.freeAmount" value="${state.s.freeAmount}" step="100" /></div>
+          <div><label>Próg 12%</label><input type="number" data-k="s.threshold12" value="${state.s.threshold12}" step="1000" /></div>
+          <div><label>ZUS limit roczny</label><input type="number" data-k="s.zusCapAnnual" value="${state.s.zusCapAnnual}" step="1000" /></div>
+        </div>
+      `;
+      syncPersonLabels();
+      renderResults();
       attachListeners();
     }
 
@@ -237,13 +250,25 @@
 
     function attachListeners() {
       document.querySelectorAll('[data-k]').forEach(el => {
-        el.oninput = el.onchange = () => {
+        const applyValue = () => {
           const key = el.dataset.k;
           const isCheckbox = el.type === 'checkbox';
           let val = isCheckbox ? el.checked : el.value;
           if (!isCheckbox && el.type === 'number') val = Number(val || 0);
           setByPath(key, val);
-          render();
+        };
+
+        const shouldFullRender = el.tagName === 'SELECT';
+        el.oninput = () => {
+          if (el.tagName === 'SELECT' || el.type === 'checkbox') return;
+          applyValue();
+          renderResults();
+        };
+
+        el.onchange = () => {
+          applyValue();
+          if (shouldFullRender) render();
+          else renderResults();
         };
       });
     }
