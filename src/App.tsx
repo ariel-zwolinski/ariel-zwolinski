@@ -10,6 +10,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Info } from "lucide-react";
 import {
   LineChart,
+  BarChart,
+  Bar,
   Line,
   CartesianGrid,
   XAxis,
@@ -612,6 +614,8 @@ export default function App() {
       result.rows.map((r) => ({
         month: r.m,
         "Podstawa PIT narastająco (razem)": round0(r.taxBaseCumTotal),
+        "PIT A": round0(r.pitA),
+        "PIT B": round0(r.pitB),
       })),
     [result.rows]
   );
@@ -778,26 +782,51 @@ export default function App() {
                 <CardContent className="p-4 md:p-6">
                   <div className="flex items-center justify-between gap-4">
                     <div>
-                      <div className="font-medium">Wizualizacja progów (narastająca podstawa PIT)</div>
+                      <div className="font-medium">Wizualizacja</div>
                       <div className="text-sm text-muted-foreground">
                         Zielone: kwota wolna • Niebieskie: 12% • Bursztynowe: pożyczony limit 12% • Czerwone: 32%
                       </div>
                     </div>
                   </div>
-                  <div className="mt-4 h-[320px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={chartData} margin={{ top: 10, right: 20, bottom: 0, left: 0 }}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="month" tickFormatter={(v) => String(v)} />
-                        <YAxis tickFormatter={(v) => `${Math.round(v / 1000)}k`} />
-                        <RTooltip formatter={(v: any) => formatPLN(Number(v))} labelFormatter={(l) => `Miesiąc ${l}`} />
-                        <Legend />
-                        <ReferenceLine y={jointFree} strokeDasharray="4 4" label="kwota wolna" />
-                        <ReferenceLine y={jointThr12} strokeDasharray="4 4" label="próg 12%" />
-                        <Line type="monotone" dataKey="Podstawa PIT narastająco (razem)" strokeWidth={2} dot={false} />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </div>
+                  <Tabs defaultValue="line" className="mt-4">
+                    <TabsList className="grid w-full grid-cols-2">
+                      <TabsTrigger value="line">Linia: podstawa PIT narastająco</TabsTrigger>
+                      <TabsTrigger value="bar">Słupki skumulowane: zaliczki PIT</TabsTrigger>
+                    </TabsList>
+
+                    <TabsContent value="line" className="mt-4">
+                      <div className="h-[320px]">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <LineChart data={chartData} margin={{ top: 10, right: 20, bottom: 0, left: 0 }}>
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis dataKey="month" tickFormatter={(v) => String(v)} />
+                            <YAxis tickFormatter={(v) => `${Math.round(v / 1000)}k`} />
+                            <RTooltip formatter={(v: any) => formatPLN(Number(v))} labelFormatter={(l) => `Miesiąc ${l}`} />
+                            <Legend />
+                            <ReferenceLine y={jointFree} strokeDasharray="4 4" label="kwota wolna" />
+                            <ReferenceLine y={jointThr12} strokeDasharray="4 4" label="próg 12%" />
+                            <Line type="monotone" dataKey="Podstawa PIT narastająco (razem)" strokeWidth={2} dot={false} />
+                          </LineChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </TabsContent>
+
+                    <TabsContent value="bar" className="mt-4">
+                      <div className="h-[320px]">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart data={chartData} margin={{ top: 10, right: 20, bottom: 0, left: 0 }}>
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis dataKey="month" tickFormatter={(v) => String(v)} />
+                            <YAxis tickFormatter={(v) => `${Math.round(v / 1000)}k`} />
+                            <RTooltip formatter={(v: any) => formatPLN(Number(v))} labelFormatter={(l) => `Miesiąc ${l}`} />
+                            <Legend />
+                            <Bar dataKey="PIT A" stackId="pit" fill="#3b82f6" radius={[6, 6, 0, 0]} />
+                            <Bar dataKey="PIT B" stackId="pit" fill="#a855f7" radius={[6, 6, 0, 0]} />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </TabsContent>
+                  </Tabs>
                 </CardContent>
               </Card>
 
