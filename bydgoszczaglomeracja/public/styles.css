@@ -1,0 +1,72 @@
+:root {
+  color-scheme: light;
+  font-family: Inter, system-ui, sans-serif;
+}
+body {
+  margin: 0;
+  background: #f6f7fb;
+  color: #172033;
+}
+.container {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 24px;
+}
+.lead {
+  margin-bottom: 20px;
+}
+.panel {
+  background: white;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
+}
+input {
+  width: 100%;
+  max-width: 420px;
+  margin-top: 6px;
+  margin-bottom: 12px;
+  padding: 10px;
+  border: 1px solid #c9d0df;
+  border-radius: 8px;
+}
+fieldset {
+  margin: 8px 0 16px;
+  border: 1px solid #dbe1ee;
+  border-radius: 10px;
+}
+.powiat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 8px;
+}
+button {
+  border: none;
+  border-radius: 8px;
+  background: #1456f0;
+  color: white;
+  padding: 10px 14px;
+  cursor: pointer;
+}
+.status {
+  margin: 16px 0;
+  font-weight: 600;
+}
+.results {
+  display: grid;
+  gap: 12px;
+}
+.card {
+  background: white;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
+}
+.meta {
+  color: #5e6b85;
+  font-size: 0.9rem;
+}
+.resources {
+  margin-top: 8px;
+  padding-left: 16px;
+}
