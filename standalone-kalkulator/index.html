@@ -3,45 +3,46 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Kalkulator wynagrodzeń 2026 — standalone</title>
+  <title>Kalkulator wynagrodzeń i PIT | pitmalzenski.pl</title>
   <style>
     :root { color-scheme: light; }
-    body { font-family: Inter, Arial, sans-serif; margin: 0; background: #f3f4f6; color: #111827; }
-    .container { max-width: 1200px; margin: 0 auto; padding: 16px; display: grid; gap: 16px; }
+    * { box-sizing: border-box; }
+    body { font-family: Inter, Arial, sans-serif; margin: 0; background: #f3f4f6; color: #111827; line-height: 1.45; }
+    .container { max-width: 1220px; margin: 0 auto; padding: 16px; display: grid; gap: 16px; }
     .card { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 14px; }
-    h1 { margin: 0; font-size: 1.4rem; }
-    h2 { margin: 0 0 10px; font-size: 1rem; }
+    h1 { margin: 0; font-size: 1.55rem; }
+    h2 { margin: 0 0 10px; font-size: 1.08rem; }
+    p { margin: 8px 0; }
+    .lead { color: #374151; }
+    .muted { color: #6b7280; font-size: 0.9rem; }
     .grid { display: grid; gap: 10px; }
     .grid.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .grid.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
     label { font-size: 0.85rem; color: #374151; display: block; margin-bottom: 4px; }
-    input, select { width: 100%; box-sizing: border-box; border: 1px solid #d1d5db; border-radius: 8px; padding: 8px; font-size: 0.95rem; }
+    input, select { width: 100%; border: 1px solid #d1d5db; border-radius: 8px; padding: 8px; font-size: 0.95rem; }
     input[type="checkbox"] { width: auto; }
     .checkbox { display: flex; align-items: center; gap: 8px; font-size: 0.9rem; }
     .summary { display: grid; gap: 10px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
     .metric { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 10px; padding: 10px; }
     .metric .k { font-size: 0.8rem; color: #6b7280; }
-    .metric .v { font-size: 1.3rem; font-weight: 600; }
+    .metric .v { font-size: 1.25rem; font-weight: 600; }
     table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
     th, td { border: 1px solid #e5e7eb; padding: 6px; text-align: right; white-space: nowrap; }
     th:first-child, td:first-child { text-align: left; }
     .table-wrap { overflow-x: auto; }
     .tabs { display: flex; flex-wrap: wrap; gap: 8px; }
-    .tab-btn {
-      border: 1px solid #d1d5db;
-      background: #f9fafb;
-      color: #374151;
-      border-radius: 999px;
-      padding: 8px 12px;
-      font-weight: 500;
-      cursor: pointer;
-    }
+    .tab-btn { border: 1px solid #d1d5db; background: #f9fafb; color: #374151; border-radius: 999px; padding: 8px 12px; font-weight: 500; cursor: pointer; }
     .tab-btn.active { background: #111827; color: #fff; border-color: #111827; }
     .tab-panel.hidden { display: none; }
     .status-KWOTA_WOLNA { background: #ecfdf5; }
     .status-12 { background: #eff6ff; }
-    .status-POZYCZONY_12 { background: #fffbeb; }
     .status-32 { background: #fef2f2; }
+    .chart-wrap { border: 1px solid #e5e7eb; border-radius: 10px; padding: 8px; background: #fff; }
+    .chart-title { font-size: 0.92rem; color: #374151; margin-bottom: 8px; }
+    .legend { display: flex; flex-wrap: wrap; gap: 12px; font-size: 0.8rem; color: #374151; margin-top: 8px; }
+    .legend span { display: inline-flex; align-items: center; gap: 6px; }
+    .dot { width: 10px; height: 10px; border-radius: 999px; display: inline-block; }
+    .outro { font-size: 0.92rem; color: #374151; }
     @media (max-width: 900px) {
       .grid.two, .grid.three, .summary { grid-template-columns: 1fr; }
     }
@@ -50,15 +51,16 @@
 <body>
   <div class="container">
     <div class="card">
-      <h1>Kalkulator wynagrodzeń 2026 (self-contained, 1 plik)</h1>
-      <p>Otwórz ten plik bez serwera (desktop/mobile), wpisz dane i wyniki liczą się automatycznie.</p>
+      <h1>Kalkulator wynagrodzeń i zaliczek PIT dla par</h1>
+      <p class="lead">Sprawdź miesiąc po miesiącu, jak wygląda wypłata netto, składki i zaliczki podatkowe. Możesz porównać rok 2025 i 2026 oraz zobaczyć, jak zmienia się wynik przy rozliczeniu oddzielnym i wspólnym.</p>
+      <p class="muted">To narzędzie jest przygotowane pod umowę o pracę i ma pomóc w codziennym planowaniu budżetu domowego — bez technicznego żargonu i bez zbędnych ustawień.</p>
     </div>
 
     <div class="card">
       <div class="tabs" id="tabsNav">
         <button class="tab-btn active" data-tab="inputs" type="button">Dane wejściowe</button>
-        <button class="tab-btn" data-tab="settings" type="button">Ustawienia</button>
-        <button class="tab-btn" data-tab="summary" type="button">Wynik</button>
+        <button class="tab-btn" data-tab="settings" type="button">Założenia</button>
+        <button class="tab-btn" data-tab="summary" type="button">Wynik roczny</button>
         <button class="tab-btn" data-tab="monthly" type="button">Miesięczne rozbicie</button>
       </div>
     </div>
@@ -71,13 +73,39 @@
     <div class="card tab-panel hidden" data-tab-panel="settings" id="settings"></div>
 
     <div class="card tab-panel hidden" data-tab-panel="summary">
-      <h2>Wynik</h2>
+      <h2>Wynik roczny</h2>
       <div class="summary" id="summary"></div>
+      <p class="muted" id="yearRulesInfo"></p>
     </div>
 
     <div class="card tab-panel hidden" data-tab-panel="monthly">
       <h2>Miesięczne rozbicie</h2>
-      <div class="table-wrap"><table id="resultTable"></table></div>
+      <div class="grid two">
+        <div class="chart-wrap">
+          <div class="chart-title">Wykres liniowy: podstawa PIT narastająco (razem)</div>
+          <svg id="lineChart" viewBox="0 0 720 280" width="100%" height="280" aria-label="Wykres liniowy podstawy PIT"></svg>
+          <div class="legend">
+            <span><i class="dot" style="background:#111827"></i>Podstawa PIT narastająco</span>
+            <span><i class="dot" style="background:#16a34a"></i>Kwota wolna (roczna)</span>
+            <span><i class="dot" style="background:#f59e0b"></i>Próg 12% / 32%</span>
+          </div>
+        </div>
+        <div class="chart-wrap">
+          <div class="chart-title">Wykres słupkowy skumulowany: zaliczki PIT A + B</div>
+          <svg id="barChart" viewBox="0 0 720 280" width="100%" height="280" aria-label="Wykres słupkowy zaliczek PIT"></svg>
+          <div class="legend">
+            <span><i class="dot" style="background:#3b82f6"></i>Zaliczka PIT osoby A</span>
+            <span><i class="dot" style="background:#a855f7"></i>Zaliczka PIT osoby B</span>
+          </div>
+        </div>
+      </div>
+      <div class="table-wrap" style="margin-top: 12px;"><table id="resultTable"></table></div>
+    </div>
+
+    <div class="card">
+      <h2>Na koniec: jak czytać wynik</h2>
+      <p class="outro">W typowym przebiegu roku zaliczki PIT są potrącane regularnie po wykorzystaniu części kwoty wolnej, więc wypłata netto pozostaje względnie stabilna. Wyraźniejszy spadek netto zwykle pojawia się dopiero po wejściu w stawkę 32%.</p>
+      <p class="outro">Jeśli chcesz, możesz od razu sprawdzić dwa scenariusze: osobne rozliczenie i wspólne rozliczenie roczne. Różnica między nimi pokaże, czy bardziej opłaca się planować nadpłatę, czy odkładanie pod ewentualną dopłatę.</p>
     </div>
   </div>
 
@@ -87,12 +115,42 @@
     const round2 = n => Math.round((n + Number.EPSILON) * 100) / 100;
     const fmt = n => (Number.isFinite(n) ? n : 0).toLocaleString("pl-PL", { style: "currency", currency: "PLN" });
 
+    const YEAR_RULES = {
+      2025: {
+        label: "2025",
+        freeAmount: 30000,
+        threshold12: 120000,
+        taxRate1: 0.12,
+        taxRate2: 0.32,
+        monthlyTaxReductionMax: 300,
+        zusEmerytalna: 0.0976,
+        zusRentowa: 0.015,
+        zusChorobowa: 0.0245,
+        zusCapAnnual: 260190,
+        healthRate: 0.09,
+        rulesNote: "Rok 2025: kwota wolna 30 000 zł, próg 12% do 120 000 zł, stawka 32% powyżej progu, limit 30-krotności składek emerytalno-rentowych 260 190 zł."
+      },
+      2026: {
+        label: "2026",
+        freeAmount: 30000,
+        threshold12: 120000,
+        taxRate1: 0.12,
+        taxRate2: 0.32,
+        monthlyTaxReductionMax: 300,
+        zusEmerytalna: 0.0976,
+        zusRentowa: 0.015,
+        zusChorobowa: 0.0245,
+        zusCapAnnual: 282600,
+        healthRate: 0.09,
+        rulesNote: "Rok 2026: kwota wolna 30 000 zł, próg 12% do 120 000 zł, stawka 32% powyżej progu, limit 30-krotności składek emerytalno-rentowych 282 600 zł."
+      }
+    };
+
     const state = {
       s: {
-        year: 2026, jointSettlement: true, enableJointAwareWithholding: true,
-        threshold12: 120000, freeAmount: 30000, taxRate1: 0.12, taxRate2: 0.32,
-        monthlyTaxReductionMax: 300, zusEmerytalna: 0.0976, zusRentowa: 0.015,
-        zusChorobowa: 0.0245, zusCapAnnual: 282600, healthRate: 0.09, savingsBufferPct: 10,
+        year: 2026,
+        finalSettlementMode: "SEPARATE",
+        savingsBufferPct: 10,
       },
       A: { name: "Osoba A", mode: "FIXED_MONTHLY", annualGross: 0, fixedMonthlyGross: 15000, monthlyGross: Array(12).fill(0), pit2MonthlyReduction: 300, kupMonthly: 250, enablePpk: false, ppkEmployeePct: 2, ppkEmployerPct: 1.5 },
       B: { name: "Osoba B", mode: "FIXED_MONTHLY", annualGross: 0, fixedMonthlyGross: 8000, monthlyGross: Array(12).fill(0), pit2MonthlyReduction: 300, kupMonthly: 250, enablePpk: false, ppkEmployeePct: 2, ppkEmployerPct: 1.5 }
@@ -100,32 +158,41 @@
 
     let activeTab = "inputs";
 
+    function currentRules(year = state.s.year) {
+      return YEAR_RULES[year] || YEAR_RULES[2026];
+    }
+
     function buildMonthlyGross(p){
       if (p.mode === "ANNUAL") return Array(12).fill(round2((p.annualGross || 0) / 12));
       if (p.mode === "FIXED_MONTHLY") return Array(12).fill(round2(p.fixedMonthlyGross || 0));
       return (p.monthlyGross?.length === 12 ? p.monthlyGross : Array(12).fill(0)).map(x => round2(x || 0));
     }
-    function calcEmployeeSocial(gross, cumPensionBase, s) {
+
+    function calcEmployeeSocial(gross, cumPensionBase, rules) {
       const grossClamped = clamp0(gross);
-      const remainingCap = Math.max(0, s.zusCapAnnual - cumPensionBase);
+      const remainingCap = Math.max(0, rules.zusCapAnnual - cumPensionBase);
       const pensionBaseThisMonth = Math.min(grossClamped, remainingCap);
-      const emerytalna = pensionBaseThisMonth * s.zusEmerytalna;
-      const rentowa = pensionBaseThisMonth * s.zusRentowa;
-      const chorobowa = grossClamped * s.zusChorobowa;
+      const emerytalna = pensionBaseThisMonth * rules.zusEmerytalna;
+      const rentowa = pensionBaseThisMonth * rules.zusRentowa;
+      const chorobowa = grossClamped * rules.zusChorobowa;
       return { pensionBaseThisMonth, socialTotal: emerytalna + rentowa + chorobowa };
     }
-    function annualTaxForBase(taxBaseAnnual, s){
+
+    function annualTaxForBase(taxBaseAnnual, rules){
       const base = clamp0(taxBaseAnnual);
-      if (base <= s.freeAmount) return 0;
-      if (base <= s.threshold12) return (base - s.freeAmount) * s.taxRate1;
-      return (s.threshold12 - s.freeAmount) * s.taxRate1 + (base - s.threshold12) * s.taxRate2;
+      if (base <= rules.freeAmount) return 0;
+      if (base <= rules.threshold12) return (base - rules.freeAmount) * rules.taxRate1;
+      return (rules.threshold12 - rules.freeAmount) * rules.taxRate1 + (base - rules.threshold12) * rules.taxRate2;
     }
+
     function compute(A, B, s){
-      const grossA = buildMonthlyGross(A), grossB = buildMonthlyGross(B);
-      let cumPensionBaseA = 0, cumPensionBaseB = 0, cumTaxBaseA = 0, cumTaxBaseB = 0, cumJointBase = 0;
+      const rules = currentRules(s.year);
+      const grossA = buildMonthlyGross(A);
+      const grossB = buildMonthlyGross(B);
+
+      let cumPensionBaseA = 0, cumPensionBaseB = 0;
+      let cumTaxBaseA = 0, cumTaxBaseB = 0;
       const rows = [];
-      const jointFree = s.jointSettlement ? 2 * s.freeAmount : s.freeAmount;
-      const jointThr12 = s.jointSettlement ? 2 * s.threshold12 : s.threshold12;
 
       for (let m=0;m<12;m++) {
         const gA = clamp0(grossA[m]), gB = clamp0(grossB[m]);
@@ -134,81 +201,101 @@
         const ppkEmpB = B.enablePpk ? gB * (B.ppkEmployeePct/100) : 0;
         const ppkErB = B.enablePpk ? gB * (B.ppkEmployerPct/100) : 0;
 
-        const socA = calcEmployeeSocial(gA, cumPensionBaseA, s), socB = calcEmployeeSocial(gB, cumPensionBaseB, s);
-        cumPensionBaseA += socA.pensionBaseThisMonth; cumPensionBaseB += socB.pensionBaseThisMonth;
+        const socA = calcEmployeeSocial(gA, cumPensionBaseA, rules);
+        const socB = calcEmployeeSocial(gB, cumPensionBaseB, rules);
+        cumPensionBaseA += socA.pensionBaseThisMonth;
+        cumPensionBaseB += socB.pensionBaseThisMonth;
 
         const socialA = socA.socialTotal, socialB = socB.socialTotal;
-        const healthA = clamp0(gA - socialA) * s.healthRate;
-        const healthB = clamp0(gB - socialB) * s.healthRate;
-        const taxBaseA = clamp0(gA - socialA - (A.kupMonthly||0) + ppkErA);
-        const taxBaseB = clamp0(gB - socialB - (B.kupMonthly||0) + ppkErB);
-        const nextCumA = cumTaxBaseA + taxBaseA, nextCumB = cumTaxBaseB + taxBaseB;
+        const healthA = clamp0(gA - socialA) * rules.healthRate;
+        const healthB = clamp0(gB - socialB) * rules.healthRate;
 
-        let pitA = 0, pitB = 0;
-        if (s.jointSettlement && s.enableJointAwareWithholding) {
-          const jointBaseThisMonth = taxBaseA + taxBaseB;
-          const nextCumJoint = cumJointBase + jointBaseThisMonth;
-          const jointTaxCum = annualTaxForBase(nextCumJoint, { ...s, freeAmount: jointFree, threshold12: jointThr12 });
-          const jointTaxPrev = annualTaxForBase(cumJointBase, { ...s, freeAmount: jointFree, threshold12: jointThr12 });
-          const jointIncrement = Math.max(0, jointTaxCum - jointTaxPrev);
-          const denom = jointBaseThisMonth > 0 ? jointBaseThisMonth : 1;
-          pitA = Math.max(0, jointIncrement * (taxBaseA / denom) - (A.pit2MonthlyReduction||0));
-          pitB = Math.max(0, jointIncrement * (taxBaseB / denom) - (B.pit2MonthlyReduction||0));
-          cumJointBase = nextCumJoint;
-        } else {
-          pitA = Math.max(0, annualTaxForBase(nextCumA, s) - annualTaxForBase(cumTaxBaseA, s) - (A.pit2MonthlyReduction||0));
-          pitB = Math.max(0, annualTaxForBase(nextCumB, s) - annualTaxForBase(cumTaxBaseB, s) - (B.pit2MonthlyReduction||0));
-        }
+        const taxBaseA = clamp0(gA - socialA - (A.kupMonthly || 0) + ppkErA);
+        const taxBaseB = clamp0(gB - socialB - (B.kupMonthly || 0) + ppkErB);
+        const nextCumA = cumTaxBaseA + taxBaseA;
+        const nextCumB = cumTaxBaseB + taxBaseB;
 
-        cumTaxBaseA = nextCumA; cumTaxBaseB = nextCumB;
-        const cumTotal = cumTaxBaseA + cumTaxBaseB;
-        let status = "12";
-        if (s.jointSettlement) {
-          if (cumTotal <= 2*s.freeAmount) status = "KWOTA_WOLNA";
-          else if (cumTotal <= 2*s.threshold12) status = (cumTaxBaseA > s.threshold12 || cumTaxBaseB > s.threshold12) ? "POZYCZONY_12" : "12";
-          else status = "32";
-        } else {
-          if (cumTotal <= s.freeAmount) status = "KWOTA_WOLNA";
-          else if (cumTotal <= s.threshold12) status = "12";
-          else status = "32";
-        }
+        const pitReductionA = Math.max(0, Math.min(rules.monthlyTaxReductionMax, A.pit2MonthlyReduction || 0));
+        const pitReductionB = Math.max(0, Math.min(rules.monthlyTaxReductionMax, B.pit2MonthlyReduction || 0));
+
+        const pitA = Math.max(0, annualTaxForBase(nextCumA, rules) - annualTaxForBase(cumTaxBaseA, rules) - pitReductionA);
+        const pitB = Math.max(0, annualTaxForBase(nextCumB, rules) - annualTaxForBase(cumTaxBaseB, rules) - pitReductionB);
+
+        cumTaxBaseA = nextCumA;
+        cumTaxBaseB = nextCumB;
+
+        const statusA = cumTaxBaseA <= rules.freeAmount ? "KWOTA_WOLNA" : cumTaxBaseA <= rules.threshold12 ? "12" : "32";
+        const statusB = cumTaxBaseB <= rules.freeAmount ? "KWOTA_WOLNA" : cumTaxBaseB <= rules.threshold12 ? "12" : "32";
+        const status = statusA === "32" || statusB === "32" ? "32" : (statusA === "KWOTA_WOLNA" && statusB === "KWOTA_WOLNA" ? "KWOTA_WOLNA" : "12");
 
         const netA = clamp0(gA - socialA - healthA - pitA - ppkEmpA);
         const netB = clamp0(gB - socialB - healthB - pitB - ppkEmpB);
 
-        rows.push({ month: MONTHS[m], grossTotal: gA + gB, socialTotal: socialA + socialB, pitTotal: pitA + pitB, netTotal: netA + netB, taxBaseCumTotal: cumTotal, taxBaseA, taxBaseB, status });
+        rows.push({
+          month: MONTHS[m],
+          monthNo: m + 1,
+          grossA: gA,
+          grossB: gB,
+          grossTotal: gA + gB,
+          socialTotal: socialA + socialB,
+          pitA,
+          pitB,
+          pitTotal: pitA + pitB,
+          netTotal: netA + netB,
+          taxBaseCumA: cumTaxBaseA,
+          taxBaseCumB: cumTaxBaseB,
+          taxBaseCumTotal: cumTaxBaseA + cumTaxBaseB,
+          status
+        });
       }
 
-      const annualBaseA = rows.reduce((a,r) => a + r.taxBaseA, 0);
-      const annualBaseB = rows.reduce((a,r) => a + r.taxBaseB, 0);
-      const annualTaxJoint = annualTaxForBase(annualBaseA + annualBaseB, { ...s, freeAmount: jointFree, threshold12: jointThr12 });
+      const annualTaxA = annualTaxForBase(cumTaxBaseA, rules);
+      const annualTaxB = annualTaxForBase(cumTaxBaseB, rules);
+      const annualTaxJoint = annualTaxForBase(cumTaxBaseA + cumTaxBaseB, {
+        ...rules,
+        freeAmount: 2 * rules.freeAmount,
+        threshold12: 2 * rules.threshold12,
+      });
+
       const advancesPaid = rows.reduce((a,r)=>a+r.pitTotal,0);
-      const taxDue = s.jointSettlement ? annualTaxJoint : annualTaxForBase(annualBaseA,s) + annualTaxForBase(annualBaseB,s);
+      const taxDue = s.finalSettlementMode === "JOINT" ? annualTaxJoint : annualTaxA + annualTaxB;
       const underpayment = taxDue - advancesPaid;
       const netTotalAnnual = rows.reduce((a,r)=>a+r.netTotal,0);
       const target = Math.max(0, underpayment) * (1 + s.savingsBufferPct/100);
-      return { rows, taxDue, advancesPaid, underpayment, target, suggestedMonthlySaving: target/12, savingsRate: netTotalAnnual > 0 ? (target/12)/(netTotalAnnual/12) : 0 };
+
+      return {
+        rows,
+        annualTaxA,
+        annualTaxB,
+        annualTaxJoint,
+        advancesPaid,
+        taxDue,
+        underpayment,
+        target,
+        suggestedMonthlySaving: target/12,
+        savingsRate: netTotalAnnual > 0 ? (target/12)/(netTotalAnnual/12) : 0,
+      };
     }
 
     function personForm(personKey) {
       const p = state[personKey];
-      const monthlyInputs = MONTHS.map((m,i)=>`<div><label>${m}</label><input type="number" data-k="${personKey}.monthlyGross.${i}" value="${p.monthlyGross[i] ?? 0}" step="100" /></div>`).join("");
+      const monthlyInputs = MONTHS.map((m,i)=>`<div><label>${m}</label><input type="number" data-k="${personKey}.monthlyGross.${i}" value="${p.monthlyGross[i] ?? 0}" step="100" min="0" /></div>`).join("");
       return `
         <h2 data-name-heading="${personKey}"></h2>
         <div class="grid two">
-          <div><label>Imię/etykieta</label><input data-k="${personKey}.name" data-name-input="${personKey}" /></div>
+          <div><label>Imię / etykieta</label><input data-k="${personKey}.name" data-name-input="${personKey}" /></div>
           <div><label>Tryb dochodu</label><select data-k="${personKey}.mode">
-            <option value="ANNUAL" ${p.mode==="ANNUAL"?"selected":""}>Rocznie</option>
+            <option value="ANNUAL" ${p.mode==="ANNUAL"?"selected":""}>Kwota roczna</option>
             <option value="FIXED_MONTHLY" ${p.mode==="FIXED_MONTHLY"?"selected":""}>Stała miesięczna</option>
-            <option value="MONTHLY_LIST" ${p.mode==="MONTHLY_LIST"?"selected":""}>Ręcznie 12 miesięcy</option>
+            <option value="MONTHLY_LIST" ${p.mode==="MONTHLY_LIST"?"selected":""}>12 miesięcy osobno</option>
           </select></div>
-          <div><label>Kwota roczna brutto</label><input type="number" data-k="${personKey}.annualGross" value="${p.annualGross}" step="100" /></div>
-          <div><label>Stała miesięczna brutto</label><input type="number" data-k="${personKey}.fixedMonthlyGross" value="${p.fixedMonthlyGross}" step="100" /></div>
-          <div><label>PIT-2 miesięcznie</label><input type="number" data-k="${personKey}.pit2MonthlyReduction" value="${p.pit2MonthlyReduction}" step="10" /></div>
-          <div><label>KUP miesięcznie</label><input type="number" data-k="${personKey}.kupMonthly" value="${p.kupMonthly}" step="10" /></div>
-          <div class="checkbox"><input type="checkbox" data-k="${personKey}.enablePpk" ${p.enablePpk?"checked":""} /><span>Włącz PPK</span></div>
-          <div><label>PPK pracownik (%)</label><input type="number" data-k="${personKey}.ppkEmployeePct" value="${p.ppkEmployeePct}" step="0.1" /></div>
-          <div><label>PPK pracodawca (%)</label><input type="number" data-k="${personKey}.ppkEmployerPct" value="${p.ppkEmployerPct}" step="0.1" /></div>
+          <div><label>Kwota roczna brutto</label><input type="number" data-k="${personKey}.annualGross" value="${p.annualGross}" step="100" min="0" /></div>
+          <div><label>Stała miesięczna brutto</label><input type="number" data-k="${personKey}.fixedMonthlyGross" value="${p.fixedMonthlyGross}" step="100" min="0" /></div>
+          <div><label>PIT-2 miesięcznie (0–300 zł)</label><input type="number" data-k="${personKey}.pit2MonthlyReduction" value="${p.pit2MonthlyReduction}" step="10" min="0" max="300" /></div>
+          <div><label>KUP miesięcznie</label><input type="number" data-k="${personKey}.kupMonthly" value="${p.kupMonthly}" step="10" min="0" /></div>
+          <div class="checkbox"><input type="checkbox" data-k="${personKey}.enablePpk" ${p.enablePpk?"checked":""} /><span>Uwzględnij PPK</span></div>
+          <div><label>PPK pracownik (%)</label><input type="number" data-k="${personKey}.ppkEmployeePct" value="${p.ppkEmployeePct}" step="0.1" min="0" max="10" /></div>
+          <div><label>PPK pracodawca (%)</label><input type="number" data-k="${personKey}.ppkEmployerPct" value="${p.ppkEmployerPct}" step="0.1" min="0" max="10" /></div>
         </div>
         ${p.mode === "MONTHLY_LIST" ? `<div class="grid three" style="margin-top:10px">${monthlyInputs}</div>` : ""}
       `;
@@ -224,23 +311,110 @@
       });
     }
 
+    function renderLineChart(rows, rules, settlementMode) {
+      const svg = document.getElementById("lineChart");
+      const W = 720, H = 280, m = { t: 14, r: 14, b: 34, l: 52 };
+      const plotW = W - m.l - m.r;
+      const plotH = H - m.t - m.b;
+      const x = i => m.l + (i / 11) * plotW;
+      const maxVal = Math.max(...rows.map(r => r.taxBaseCumTotal), 2 * rules.threshold12, 2 * rules.freeAmount, 1);
+      const y = v => m.t + plotH - (v / maxVal) * plotH;
+
+      let path = "";
+      rows.forEach((r, i) => { path += `${i === 0 ? "M" : "L"} ${x(i)} ${y(r.taxBaseCumTotal)} `; });
+
+      const freeLine = 2 * rules.freeAmount;
+      const thrLine = 2 * rules.threshold12;
+
+      const monthLabels = rows.map((r, i) => `<text x="${x(i)}" y="${H-10}" text-anchor="middle" font-size="10" fill="#6b7280">${r.monthNo}</text>`).join("");
+      svg.innerHTML = `
+        <rect x="0" y="0" width="${W}" height="${H}" fill="#fff" />
+        <line x1="${m.l}" y1="${m.t}" x2="${m.l}" y2="${H-m.b}" stroke="#d1d5db" />
+        <line x1="${m.l}" y1="${H-m.b}" x2="${W-m.r}" y2="${H-m.b}" stroke="#d1d5db" />
+        <line x1="${m.l}" y1="${y(freeLine)}" x2="${W-m.r}" y2="${y(freeLine)}" stroke="#16a34a" stroke-dasharray="4 4" />
+        <line x1="${m.l}" y1="${y(thrLine)}" x2="${W-m.r}" y2="${y(thrLine)}" stroke="#f59e0b" stroke-dasharray="4 4" />
+        <path d="${path}" fill="none" stroke="#111827" stroke-width="2.2" />
+        ${monthLabels}
+        <text x="${m.l+4}" y="${Math.max(12, y(freeLine)-4)}" font-size="10" fill="#16a34a">kwota wolna (łącznie)</text>
+        <text x="${m.l+4}" y="${Math.max(12, y(thrLine)-4)}" font-size="10" fill="#b45309">próg 12%/32% (łącznie)</text>
+      `;
+    }
+
+    function renderStackedBarChart(rows) {
+      const svg = document.getElementById("barChart");
+      const W = 720, H = 280, m = { t: 14, r: 14, b: 34, l: 52 };
+      const plotW = W - m.l - m.r;
+      const plotH = H - m.t - m.b;
+      const barW = plotW / 12 * 0.62;
+      const maxVal = Math.max(...rows.map(r => r.pitA + r.pitB), 1);
+      const y = v => m.t + plotH - (v / maxVal) * plotH;
+
+      const bars = rows.map((r, i) => {
+        const cx = m.l + (i + 0.5) * (plotW / 12);
+        const totalTop = y(r.pitA + r.pitB);
+        const aTop = y(r.pitA);
+        const baseY = m.t + plotH;
+        return `
+          <rect x="${cx - barW/2}" y="${aTop}" width="${barW}" height="${Math.max(0, baseY - aTop)}" fill="#3b82f6" />
+          <rect x="${cx - barW/2}" y="${totalTop}" width="${barW}" height="${Math.max(0, aTop - totalTop)}" fill="#a855f7" />
+          <text x="${cx}" y="${H-10}" text-anchor="middle" font-size="10" fill="#6b7280">${r.monthNo}</text>
+        `;
+      }).join("");
+
+      svg.innerHTML = `
+        <rect x="0" y="0" width="${W}" height="${H}" fill="#fff" />
+        <line x1="${m.l}" y1="${m.t}" x2="${m.l}" y2="${H-m.b}" stroke="#d1d5db" />
+        <line x1="${m.l}" y1="${H-m.b}" x2="${W-m.r}" y2="${H-m.b}" stroke="#d1d5db" />
+        ${bars}
+      `;
+    }
+
     function renderResults() {
       const result = compute(state.A, state.B, state.s);
+      const rules = currentRules();
+      const modeName = state.s.finalSettlementMode === "JOINT" ? "wspólne rozliczenie roczne" : "oddzielne rozliczenie roczne";
+
       document.getElementById("summary").innerHTML = `
-        <div class="metric"><div class="k">Podatek należny (rocznie)</div><div class="v">${fmt(result.taxDue)}</div></div>
-        <div class="metric"><div class="k">Suma zaliczek PIT</div><div class="v">${fmt(result.advancesPaid)}</div></div>
-        <div class="metric"><div class="k">Niedopłata / nadpłata</div><div class="v" style="color:${result.underpayment>0?"#b91c1c":"#047857"}">${fmt(result.underpayment)}</div></div>
-        <div class="metric"><div class="k">Cel oszczędzania</div><div class="v">${fmt(result.target)}</div></div>
-        <div class="metric"><div class="k">Miesięczna odkładana kwota</div><div class="v">${fmt(result.suggestedMonthlySaving)}</div></div>
-        <div class="metric"><div class="k">Stopa oszczędzania</div><div class="v">${(result.savingsRate*100).toFixed(2)}%</div></div>
+        <div class="metric"><div class="k">Podatek należny (rocznie, ${modeName})</div><div class="v">${fmt(result.taxDue)}</div></div>
+        <div class="metric"><div class="k">Suma pobranych zaliczek PIT</div><div class="v">${fmt(result.advancesPaid)}</div></div>
+        <div class="metric"><div class="k">Niedopłata / nadpłata po rozliczeniu</div><div class="v" style="color:${result.underpayment>0?"#b91c1c":"#047857"}">${fmt(result.underpayment)}</div></div>
+        <div class="metric"><div class="k">Sugerowany bufor roczny</div><div class="v">${fmt(result.target)}</div></div>
+        <div class="metric"><div class="k">Sugerowane odkładanie miesięczne</div><div class="v">${fmt(result.suggestedMonthlySaving)}</div></div>
+        <div class="metric"><div class="k">Udział odkładania w miesięcznym netto</div><div class="v">${(result.savingsRate*100).toFixed(2)}%</div></div>
       `;
+
+      document.getElementById("yearRulesInfo").textContent = `${rules.rulesNote} Zaliczki miesięczne liczone są oddzielnie dla każdej osoby, dzięki czemu przepływ netto jest stabilny do momentu wejścia w 32%.`;
+
+      renderLineChart(result.rows, rules, state.s.finalSettlementMode);
+      renderStackedBarChart(result.rows);
 
       const rows = result.rows.map(r => `
         <tr class="status-${r.status}">
-          <td>${r.month}</td><td>${fmt(r.grossTotal)}</td><td>${fmt(r.socialTotal)}</td><td>${fmt(r.pitTotal)}</td><td>${fmt(r.netTotal)}</td><td>${fmt(r.taxBaseCumTotal)}</td><td>${r.status}</td>
+          <td>${r.month}</td>
+          <td>${fmt(r.grossA)}</td>
+          <td>${fmt(r.grossB)}</td>
+          <td>${fmt(r.pitA)}</td>
+          <td>${fmt(r.pitB)}</td>
+          <td>${fmt(r.pitTotal)}</td>
+          <td>${fmt(r.netTotal)}</td>
+          <td>${fmt(r.taxBaseCumTotal)}</td>
+          <td>${r.status}</td>
         </tr>`).join("");
+
       document.getElementById("resultTable").innerHTML = `
-        <thead><tr><th>Miesiąc</th><th>Brutto razem</th><th>Składki społeczne</th><th>PIT zaliczka</th><th>Netto razem</th><th>Podstawa PIT narastająco</th><th>Status progu</th></tr></thead>
+        <thead>
+          <tr>
+            <th>Miesiąc</th>
+            <th>Brutto A</th>
+            <th>Brutto B</th>
+            <th>PIT A</th>
+            <th>PIT B</th>
+            <th>PIT razem</th>
+            <th>Netto razem</th>
+            <th>Podstawa PIT narastająco</th>
+            <th>Strefa</th>
+          </tr>
+        </thead>
         <tbody>${rows}</tbody>
       `;
     }
@@ -249,15 +423,28 @@
       document.getElementById("personA").innerHTML = personForm("A");
       document.getElementById("personB").innerHTML = personForm("B");
       document.getElementById("settings").innerHTML = `
-        <h2>Ustawienia</h2>
+        <h2>Założenia wspólne</h2>
         <div class="grid three">
-          <div class="checkbox"><input type="checkbox" data-k="s.jointSettlement" ${state.s.jointSettlement?"checked":""} /><span>Wspólne rozliczenie</span></div>
-          <div class="checkbox"><input type="checkbox" data-k="s.enableJointAwareWithholding" ${state.s.enableJointAwareWithholding?"checked":""} /><span>Zaliczki pod wspólne</span></div>
-          <div><label>Bufor oszczędzania (%)</label><input type="number" data-k="s.savingsBufferPct" value="${state.s.savingsBufferPct}" step="1" /></div>
-          <div><label>Kwota wolna</label><input type="number" data-k="s.freeAmount" value="${state.s.freeAmount}" step="100" /></div>
-          <div><label>Próg 12%</label><input type="number" data-k="s.threshold12" value="${state.s.threshold12}" step="1000" /></div>
-          <div><label>ZUS limit roczny</label><input type="number" data-k="s.zusCapAnnual" value="${state.s.zusCapAnnual}" step="1000" /></div>
+          <div>
+            <label>Rok podatkowy</label>
+            <select data-k="s.year">
+              <option value="2025" ${state.s.year===2025?"selected":""}>2025</option>
+              <option value="2026" ${state.s.year===2026?"selected":""}>2026</option>
+            </select>
+          </div>
+          <div>
+            <label>Rozliczenie roczne</label>
+            <select data-k="s.finalSettlementMode">
+              <option value="SEPARATE" ${state.s.finalSettlementMode==="SEPARATE"?"selected":""}>Oddzielnie</option>
+              <option value="JOINT" ${state.s.finalSettlementMode==="JOINT"?"selected":""}>Wspólnie</option>
+            </select>
+          </div>
+          <div>
+            <label>Dodatkowy bufor bezpieczeństwa (%)</label>
+            <input type="number" data-k="s.savingsBufferPct" value="${state.s.savingsBufferPct}" step="1" min="0" max="100" />
+          </div>
         </div>
+        <p class="muted" style="margin-top:10px;">Stawki i limity są dobierane automatycznie według wybranego roku. Dzięki temu nie musisz uzupełniać pól, które i tak nie zmieniają się w trakcie roku.</p>
       `;
       syncPersonLabels();
       renderResults();
@@ -269,7 +456,6 @@
       document.querySelectorAll('[data-tab]').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.tab === activeTab);
       });
-
       document.querySelectorAll('[data-tab-panel]').forEach(panel => {
         panel.classList.toggle('hidden', panel.dataset.tabPanel !== activeTab);
       });
@@ -280,6 +466,15 @@
       let t = state;
       for (let i=0;i<parts.length-1;i++) t = t[parts[i]];
       t[parts.at(-1)] = value;
+    }
+
+    function clampFormValues(path, val) {
+      if (path.endsWith("pit2MonthlyReduction")) return Math.max(0, Math.min(300, Number(val || 0)));
+      if (path.endsWith("kupMonthly")) return Math.max(0, Number(val || 0));
+      if (path.includes("Gross") || path.endsWith("savingsBufferPct")) return Math.max(0, Number(val || 0));
+      if (path.endsWith("ppkEmployeePct") || path.endsWith("ppkEmployerPct")) return Math.max(0, Math.min(10, Number(val || 0)));
+      if (path === "s.year") return Number(val) === 2025 ? 2025 : 2026;
+      return val;
     }
 
     function attachListeners() {
@@ -296,7 +491,7 @@
           const isCheckbox = el.type === 'checkbox';
           let val = isCheckbox ? el.checked : el.value;
           if (!isCheckbox && el.type === 'number') val = Number(val || 0);
-          setByPath(key, val);
+          setByPath(key, clampFormValues(key, val));
         };
 
         const shouldFullRender = el.tagName === 'SELECT';
