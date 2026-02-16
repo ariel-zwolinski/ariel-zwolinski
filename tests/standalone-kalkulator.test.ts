@@ -184,3 +184,34 @@ test("standalone: walidacja wejść w interakcji (clamp) działa poprawnie", () 
   rt.setByPath("A.fixedMonthlyGross", 12345);
   assert.equal(rt.state.A.fixedMonthlyGross, 12345);
 });
+
+
+test("standalone: compute wybiera reguły na podstawie s.year, nie globalnego state", () => {
+  const rt = loadStandaloneRuntime();
+
+  rt.state.s.year = 2026;
+  rt.state.A.mode = "FIXED_MONTHLY";
+  rt.state.B.mode = "FIXED_MONTHLY";
+  rt.state.A.fixedMonthlyGross = 60000;
+  rt.state.B.fixedMonthlyGross = 60000;
+
+  const settings2025 = { ...rt.state.s, year: 2025 };
+  const settings2026 = { ...rt.state.s, year: 2026 };
+
+  const y2025 = rt.compute(rt.state.A, rt.state.B, settings2025);
+  const y2026 = rt.compute(rt.state.A, rt.state.B, settings2026);
+
+  assert.notEqual(Number(y2025.taxDue.toFixed(2)), Number(y2026.taxDue.toFixed(2)));
+});
+
+test("standalone: linie progów na wykresie są w skali łącznej podstawy", () => {
+  const rt = loadStandaloneRuntime();
+
+  rt.state.s.year = 2026;
+  rt.state.s.finalSettlementMode = "SEPARATE";
+  rt.render();
+
+  const lineChartSVG = rt.elements.get("lineChart")!.innerHTML;
+  assert.match(lineChartSVG, /kwota wolna \(łącznie\)/);
+  assert.match(lineChartSVG, /próg 12%\/32% \(łącznie\)/);
+});
