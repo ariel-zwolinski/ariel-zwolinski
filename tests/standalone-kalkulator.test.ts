@@ -152,7 +152,7 @@ test("standalone: UI renderuje ustawienia, tabelę i oba wykresy", () => {
   assert.match(settingsHTML, /Rok podatkowy/);
   assert.match(settingsHTML, />2025</);
   assert.match(settingsHTML, />2026</);
-  assert.match(settingsHTML, /Rozliczenie roczne/);
+  assert.match(settingsHTML, /Tryb rozliczenia i poboru zaliczek/);
 
   const summaryHTML = rt.elements.get("summary")!.innerHTML;
   assert.match(summaryHTML, /Podatek należny/);
@@ -204,16 +204,45 @@ test("standalone: compute wybiera reguły na podstawie s.year, nie globalnego st
   assert.notEqual(Number(y2025.taxDue.toFixed(2)), Number(y2026.taxDue.toFixed(2)));
 });
 
-test("standalone: linie progów na wykresie są w skali łącznej podstawy", () => {
+test("standalone: linie progów na wykresie zależą od trybu rozliczenia", () => {
   const rt = loadStandaloneRuntime();
 
   rt.state.s.year = 2026;
   rt.state.s.finalSettlementMode = "SEPARATE";
   rt.render();
 
-  const lineChartSVG = rt.elements.get("lineChart")!.innerHTML;
-  assert.match(lineChartSVG, /kwota wolna \(łącznie\)/);
-  assert.match(lineChartSVG, /próg 12%\/32% \(łącznie\)/);
+  const separateChartSVG = rt.elements.get("lineChart")!.innerHTML;
+  assert.match(separateChartSVG, /kwota wolna \(na osobę\)/);
+  assert.match(separateChartSVG, /próg 12%\/32% \(na osobę\)/);
+
+  rt.state.s.finalSettlementMode = "JOINT";
+  rt.render();
+
+  const jointChartSVG = rt.elements.get("lineChart")!.innerHTML;
+  assert.match(jointChartSVG, /kwota wolna \(łącznie\)/);
+  assert.match(jointChartSVG, /próg 12%\/32% \(łącznie\)/);
+});
+
+test("standalone: przełączenie wspólne/oddzielne zmienia zaliczki i wynik", () => {
+  const rt = loadStandaloneRuntime();
+
+  rt.state.s.year = 2026;
+  rt.state.A.mode = "FIXED_MONTHLY";
+  rt.state.B.mode = "FIXED_MONTHLY";
+  rt.state.A.fixedMonthlyGross = 18000;
+  rt.state.B.fixedMonthlyGross = 4000;
+  rt.state.A.pit2MonthlyReduction = 300;
+  rt.state.B.pit2MonthlyReduction = 300;
+
+  rt.state.s.finalSettlementMode = "SEPARATE";
+  const separate = rt.compute(rt.state.A, rt.state.B, rt.state.s);
+
+  rt.state.s.finalSettlementMode = "JOINT";
+  const joint = rt.compute(rt.state.A, rt.state.B, rt.state.s);
+
+  assert.notEqual(separate.advancesPaid, joint.advancesPaid);
+  assert.notEqual(separate.rows[11].pitTotal, joint.rows[11].pitTotal);
+  assert.notEqual(separate.underpayment, joint.underpayment);
 });
 
 

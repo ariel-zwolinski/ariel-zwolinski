@@ -58,28 +58,25 @@
 
     <div class="card">
       <div class="tabs" id="tabsNav">
-        <button class="tab-btn active" data-tab="inputs" type="button">Dane wejściowe</button>
-        <button class="tab-btn" data-tab="settings" type="button">Założenia</button>
-        <button class="tab-btn" data-tab="summary" type="button">Wynik roczny</button>
-        <button class="tab-btn" data-tab="monthly" type="button">Miesięczne rozbicie</button>
+        <button class="tab-btn active" data-tab="inputs" type="button">Dane wejściowe i dochody</button>
+        <button class="tab-btn" data-tab="summary" type="button">Podsumowanie i wykresy</button>
       </div>
     </div>
 
     <div class="grid two tab-panel" data-tab-panel="inputs">
       <div class="card" id="personA"></div>
       <div class="card" id="personB"></div>
+      <div class="card" id="settings"></div>
+      <div class="card" style="display:flex;justify-content:flex-end;align-items:center;">
+        <button class="tab-btn active" id="goToSummaryBtn" type="button">Przejdź do podsumowania</button>
+      </div>
     </div>
-
-    <div class="card tab-panel hidden" data-tab-panel="settings" id="settings"></div>
 
     <div class="card tab-panel hidden" data-tab-panel="summary">
       <h2>Wynik roczny</h2>
       <div class="summary" id="summary"></div>
       <p class="muted" id="yearRulesInfo"></p>
-    </div>
-
-    <div class="card tab-panel hidden" data-tab-panel="monthly">
-      <h2>Miesięczne rozbicie</h2>
+      <h2 style="margin-top: 14px;">Miesięczne rozbicie</h2>
       <div class="grid two">
         <div class="chart-wrap">
           <div class="chart-title">Wykres liniowy: podstawa PIT narastająco (razem)</div>
@@ -153,7 +150,6 @@
       s: {
         year: 2026,
         finalSettlementMode: "SEPARATE",
-        savingsBufferPct: 10,
       },
       A: { name: "Osoba A", mode: "FIXED_MONTHLY", annualGross: 0, fixedMonthlyGross: 15000, monthlyGross: Array(12).fill(0), pit2MonthlyReduction: 300, kupMonthly: 250, enablePpk: false, ppkEmployeePct: 2, ppkEmployerPct: 1.5 },
       B: { name: "Osoba B", mode: "FIXED_MONTHLY", annualGross: 0, fixedMonthlyGross: 8000, monthlyGross: Array(12).fill(0), pit2MonthlyReduction: 300, kupMonthly: 250, enablePpk: false, ppkEmployeePct: 2, ppkEmployerPct: 1.5 }
@@ -192,9 +188,16 @@
       const rules = currentRules(s.year);
       const grossA = buildMonthlyGross(A);
       const grossB = buildMonthlyGross(B);
+      const isJoint = s.finalSettlementMode === "JOINT";
+      const jointRules = {
+        ...rules,
+        freeAmount: 2 * rules.freeAmount,
+        threshold12: 2 * rules.threshold12,
+      };
 
       let cumPensionBaseA = 0, cumPensionBaseB = 0;
       let cumTaxBaseA = 0, cumTaxBaseB = 0;
+      let cumTaxBaseJoint = 0;
       const rows = [];
 
       for (let m=0;m<12;m++) {
@@ -221,8 +224,25 @@
         const pitReductionA = Math.max(0, Math.min(rules.monthlyTaxReductionMax, A.pit2MonthlyReduction || 0));
         const pitReductionB = Math.max(0, Math.min(rules.monthlyTaxReductionMax, B.pit2MonthlyReduction || 0));
 
-        const pitA = roundTaxToPln(Math.max(0, annualTaxForBase(nextCumA, rules) - annualTaxForBase(cumTaxBaseA, rules) - pitReductionA));
-        const pitB = roundTaxToPln(Math.max(0, annualTaxForBase(nextCumB, rules) - annualTaxForBase(cumTaxBaseB, rules) - pitReductionB));
+        let pitA = 0;
+        let pitB = 0;
+
+        if (isJoint) {
+          const taxBaseJoint = taxBaseA + taxBaseB;
+          const nextCumJoint = cumTaxBaseJoint + taxBaseJoint;
+          const jointIncrement = annualTaxForBase(nextCumJoint, jointRules) - annualTaxForBase(cumTaxBaseJoint, jointRules);
+          const denom = taxBaseJoint > 0 ? taxBaseJoint : 1;
+
+          pitA = Math.max(0, jointIncrement * (taxBaseA / denom) - pitReductionA);
+          pitB = Math.max(0, jointIncrement * (taxBaseB / denom) - pitReductionB);
+          cumTaxBaseJoint = nextCumJoint;
+        } else {
+          pitA = Math.max(0, annualTaxForBase(nextCumA, rules) - annualTaxForBase(cumTaxBaseA, rules) - pitReductionA);
+          pitB = Math.max(0, annualTaxForBase(nextCumB, rules) - annualTaxForBase(cumTaxBaseB, rules) - pitReductionB);
+        }
+
+        pitA = roundTaxToPln(pitA);
+        pitB = roundTaxToPln(pitB);
 
         cumTaxBaseA = nextCumA;
         cumTaxBaseB = nextCumB;
@@ -254,17 +274,14 @@
 
       const annualTaxA = roundTaxToPln(annualTaxForBase(cumTaxBaseA, rules));
       const annualTaxB = roundTaxToPln(annualTaxForBase(cumTaxBaseB, rules));
-      const annualTaxJoint = roundTaxToPln(annualTaxForBase(cumTaxBaseA + cumTaxBaseB, {
-        ...rules,
-        freeAmount: 2 * rules.freeAmount,
-        threshold12: 2 * rules.threshold12,
-      }));
+      const annualTaxJoint = roundTaxToPln(annualTaxForBase(cumTaxBaseA + cumTaxBaseB, jointRules));
 
       const advancesPaid = rows.reduce((a,r)=>a+r.pitTotal,0);
       const taxDue = s.finalSettlementMode === "JOINT" ? annualTaxJoint : annualTaxA + annualTaxB;
       const underpayment = taxDue - advancesPaid;
       const netTotalAnnual = rows.reduce((a,r)=>a+r.netTotal,0);
-      const target = Math.max(0, underpayment) * (1 + s.savingsBufferPct/100);
+      const target = Math.max(0, underpayment);
+      const suggestedMonthlySaving = target / 12;
 
       return {
         rows,
@@ -275,8 +292,8 @@
         taxDue,
         underpayment,
         target,
-        suggestedMonthlySaving: target/12,
-        savingsRate: netTotalAnnual > 0 ? (target/12)/(netTotalAnnual/12) : 0,
+        suggestedMonthlySaving,
+        monthlyNetAverage: netTotalAnnual > 0 ? netTotalAnnual / 12 : 0,
       };
     }
 
@@ -320,14 +337,13 @@
       const plotW = W - m.l - m.r;
       const plotH = H - m.t - m.b;
       const x = i => m.l + (i / 11) * plotW;
-      const maxVal = Math.max(...rows.map(r => r.taxBaseCumTotal), 2 * rules.threshold12, 2 * rules.freeAmount, 1);
+      const freeLine = settlementMode === "JOINT" ? 2 * rules.freeAmount : rules.freeAmount;
+      const thrLine = settlementMode === "JOINT" ? 2 * rules.threshold12 : rules.threshold12;
+      const maxVal = Math.max(...rows.map(r => r.taxBaseCumTotal), thrLine, freeLine, 1);
       const y = v => m.t + plotH - (v / maxVal) * plotH;
 
       let path = "";
       rows.forEach((r, i) => { path += `${i === 0 ? "M" : "L"} ${x(i)} ${y(r.taxBaseCumTotal)} `; });
-
-      const freeLine = 2 * rules.freeAmount;
-      const thrLine = 2 * rules.threshold12;
 
       const monthLabels = rows.map((r, i) => `<text x="${x(i)}" y="${H-10}" text-anchor="middle" font-size="10" fill="#6b7280">${r.monthNo}</text>`).join("");
       svg.innerHTML = `
@@ -338,8 +354,8 @@
         <line x1="${m.l}" y1="${y(thrLine)}" x2="${W-m.r}" y2="${y(thrLine)}" stroke="#f59e0b" stroke-dasharray="4 4" />
         <path d="${path}" fill="none" stroke="#111827" stroke-width="2.2" />
         ${monthLabels}
-        <text x="${m.l+4}" y="${Math.max(12, y(freeLine)-4)}" font-size="10" fill="#16a34a">kwota wolna (łącznie)</text>
-        <text x="${m.l+4}" y="${Math.max(12, y(thrLine)-4)}" font-size="10" fill="#b45309">próg 12%/32% (łącznie)</text>
+        <text x="${m.l+4}" y="${Math.max(12, y(freeLine)-4)}" font-size="10" fill="#16a34a">kwota wolna (${settlementMode === "JOINT" ? "łącznie" : "na osobę"})</text>
+        <text x="${m.l+4}" y="${Math.max(12, y(thrLine)-4)}" font-size="10" fill="#b45309">próg 12%/32% (${settlementMode === "JOINT" ? "łącznie" : "na osobę"})</text>
       `;
     }
 
@@ -381,12 +397,15 @@
         <div class="metric"><div class="k">Podatek należny (rocznie, ${modeName})</div><div class="v">${fmt(result.taxDue)}</div></div>
         <div class="metric"><div class="k">Suma pobranych zaliczek PIT</div><div class="v">${fmt(result.advancesPaid)}</div></div>
         <div class="metric"><div class="k">Niedopłata / nadpłata po rozliczeniu</div><div class="v" style="color:${result.underpayment>0?"#b91c1c":"#047857"}">${fmt(result.underpayment)}</div></div>
-        <div class="metric"><div class="k">Sugerowany bufor roczny</div><div class="v">${fmt(result.target)}</div></div>
+        <div class="metric"><div class="k">Kwota do odłożenia na podatek</div><div class="v">${fmt(result.target)}</div></div>
         <div class="metric"><div class="k">Sugerowane odkładanie miesięczne</div><div class="v">${fmt(result.suggestedMonthlySaving)}</div></div>
-        <div class="metric"><div class="k">Udział odkładania w miesięcznym netto</div><div class="v">${(result.savingsRate*100).toFixed(2)}%</div></div>
+        <div class="metric"><div class="k">Średnie miesięczne netto (razem)</div><div class="v">${fmt(result.monthlyNetAverage)}</div></div>
       `;
 
-      document.getElementById("yearRulesInfo").textContent = `${rules.rulesNote} Wyniki mają charakter orientacyjny. Zaliczki miesięczne i podatek roczny są zaokrąglane matematycznie do pełnych złotych (0,50 zł i wyżej w górę). Zaliczki miesięczne liczone są oddzielnie dla każdej osoby, dzięki czemu przepływ netto jest stabilny do momentu wejścia w 32%.`;
+      const advancesModeInfo = state.s.finalSettlementMode === "JOINT"
+        ? "Zaliczki miesięczne są liczone w trybie wspólnym i dzielone proporcjonalnie między osoby."
+        : "Zaliczki miesięczne są liczone oddzielnie dla każdej osoby.";
+      document.getElementById("yearRulesInfo").textContent = `${rules.rulesNote} Wyniki mają charakter orientacyjny. Zaliczki miesięczne i podatek roczny są zaokrąglane matematycznie do pełnych złotych (0,50 zł i wyżej w górę). ${advancesModeInfo}`;
 
       renderLineChart(result.rows, rules, state.s.finalSettlementMode);
       renderStackedBarChart(result.rows);
@@ -426,8 +445,8 @@
       document.getElementById("personA").innerHTML = personForm("A");
       document.getElementById("personB").innerHTML = personForm("B");
       document.getElementById("settings").innerHTML = `
-        <h2>Założenia wspólne</h2>
-        <div class="grid three">
+        <h2>Parametry kalkulacji</h2>
+        <div class="grid two">
           <div>
             <label>Rok podatkowy</label>
             <select data-k="s.year">
@@ -436,18 +455,14 @@
             </select>
           </div>
           <div>
-            <label>Rozliczenie roczne</label>
+            <label>Tryb rozliczenia i poboru zaliczek</label>
             <select data-k="s.finalSettlementMode">
               <option value="SEPARATE" ${state.s.finalSettlementMode==="SEPARATE"?"selected":""}>Oddzielnie</option>
               <option value="JOINT" ${state.s.finalSettlementMode==="JOINT"?"selected":""}>Wspólnie</option>
             </select>
           </div>
-          <div>
-            <label>Dodatkowy bufor bezpieczeństwa (%)</label>
-            <input type="number" data-k="s.savingsBufferPct" value="${state.s.savingsBufferPct}" step="1" min="0" max="100" />
-          </div>
         </div>
-        <p class="muted" style="margin-top:10px;">Stawki i limity są dobierane automatycznie według wybranego roku. Dzięki temu nie musisz uzupełniać pól, które i tak nie zmieniają się w trakcie roku.</p>
+        <p class="muted" style="margin-top:10px;">Stawki i limity są dobierane automatycznie według wybranego roku. Najpierw wpisz dane, a potem przejdź do zakładki z podsumowaniem i wykresami.</p>
       `;
       syncPersonLabels();
       renderResults();
@@ -474,13 +489,21 @@
     function clampFormValues(path, val) {
       if (path.endsWith("pit2MonthlyReduction")) return Math.max(0, Math.min(300, Number(val || 0)));
       if (path.endsWith("kupMonthly")) return Math.max(0, Number(val || 0));
-      if (path.includes("Gross") || path.endsWith("savingsBufferPct")) return Math.max(0, Number(val || 0));
+      if (path.includes("Gross")) return Math.max(0, Number(val || 0));
       if (path.endsWith("ppkEmployeePct") || path.endsWith("ppkEmployerPct")) return Math.max(0, Math.min(10, Number(val || 0)));
       if (path === "s.year") return Number(val) === 2025 ? 2025 : 2026;
       return val;
     }
 
     function attachListeners() {
+      const goToSummaryBtn = document.getElementById("goToSummaryBtn");
+      if (goToSummaryBtn) {
+        goToSummaryBtn.onclick = () => {
+          activeTab = "summary";
+          syncTabs();
+        };
+      }
+
       document.querySelectorAll('[data-tab]').forEach(btn => {
         btn.onclick = () => {
           activeTab = btn.dataset.tab;
