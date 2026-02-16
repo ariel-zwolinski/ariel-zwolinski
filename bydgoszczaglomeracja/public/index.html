@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="pl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BydgoszczAglomeracja — MVP</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="container">
+      <h1>BydgoszczAglomeracja — monitoring danych mieszkaniowych</h1>
+      <p class="lead">
+        MVP inspirowane deweloperuch.pl: wyszukuje i filtruje zbiory z <strong>dane.gov.pl</strong>
+        związane z rynkiem mieszkaniowym dla Bydgoszczy i okolicznych powiatów.
+      </p>
+
+      <section class="panel">
+        <form id="searchForm">
+          <label>
+            Fraza wyszukiwania
+            <input id="queryInput" name="query" value="budownictwo mieszkaniowe" />
+          </label>
+
+          <fieldset>
+            <legend>Powiaty (filtr lokalny)</legend>
+            <div id="powiatList" class="powiat-grid"></div>
+          </fieldset>
+
+          <button type="submit">Odśwież dane</button>
+        </form>
+      </section>
+
+      <section id="status" class="status">Ładowanie listy powiatów…</section>
+      <section id="results" class="results"></section>
+    </main>
+
+    <script type="module" src="/main.js"></script>
+  </body>
+</html>
